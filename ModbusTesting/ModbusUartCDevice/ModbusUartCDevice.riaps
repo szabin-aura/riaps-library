@@ -1,0 +1,12 @@
+// RIAPS Modbus (UART) Device Testing
+
+message ModbusCommand;     // send Modbus action Request
+message ModbusResponse;    // get response from Modbus action
+
+// Modbus (UART) device interface - UART2
+//     considered the server for the request/response interaction
+device ModbusUART (slaveaddress=10, port='UART2', baudrate=115200, numholdreg=3, numinputreg=4)
+{
+    rep modbusRepPort : (ModbusCommand,ModbusResponse);
+    timer clock 10;
+}

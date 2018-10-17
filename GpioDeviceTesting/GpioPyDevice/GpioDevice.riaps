@@ -1,0 +1,31 @@
+// GPIO Device Interface
+
+app GpioToggleExample {
+
+    message GpioCommand;
+    message GpioResponse;
+
+    library Adafruit_BBIO; 
+
+    // GPIO Device - pin name (P8_pin# or P9_pin# or USR0-USR3), direction (IN or OUT) and
+    //               pull_up_down (PUD_OFF, PUD_UP or PUD_DOWN) the device setup defaults are defined here
+    //               Note:  USR0 is used to show network activity, so use USR1-3 first
+    //
+    // Both read and write requests will return the current value of the GPIO as a published DataValue
+    device GpioDevice(bbb_pin_name='P8_11', direction='OUT', pull_up_down='PUD_OFF', setup_delay=60)
+    {
+        // Inside port for forwarding messages coming from an internal thread.
+        // The 'default' is optional, it implies a 1 sec timer/ticker thread.
+        inside trigger;
+
+        timer clock 100;  // Connect to GPIO on first clock
+        rep gpioRepPort : (GpioCommand, GpioResponse);
+    }
+
+    // TestGpioToggle actor
+    actor TestGpioToggleActor() {
+       {
+       	  gpioDevice : GpioDeviceComponent(bbb_pin_name='P8_11', direction='OUT', setup_delay=100); // application specific setup options
+       }
+    }
+}

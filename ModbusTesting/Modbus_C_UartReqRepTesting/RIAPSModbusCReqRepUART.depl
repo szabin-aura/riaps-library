@@ -1,0 +1,4 @@
+app RIAPSModbusCReqRepUART {
+    on (192.168.1.102) ModbusExampleActor;
+    on (192.168.1.101) ModbusLogger;
+}

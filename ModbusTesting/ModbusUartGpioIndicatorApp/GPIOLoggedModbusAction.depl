@@ -1,0 +1,14 @@
+host dspNode1 {
+	device ModbusUART tag dspBBB1;
+	device GpioDevice;
+	net etho0 address 192.168.1.103;
+}
+
+host vmNode1 {
+    net enp0s8 address 192.168.1.101;
+}
+
+app GPIOLoggedModbusAction {
+	on dspNode1 ModbusExampleActor;
+//	on vmNode1 ModbusLogger;
+}

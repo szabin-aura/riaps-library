@@ -55,6 +55,21 @@ is the letter 'O', not zero) that references ttyS2 (a special character files)
    lrwxrwxrwx 1 root root 5 Mar  6 22:54 /dev/ttyO2 -> ttyS2
 ```
 
+If the enabled UART does not show up in the verification step, check that the eMMC bootloader is not blocking the uboot overlay.  
+
+```
+   sudo /opt/scripts/tools/version.sh | grep bootloader
+```
+
+You might find that the eMMC bootloader is older than 2018 (as shown below).  
+
+```
+bootloader:[microSD-(push-button)]:[/dev/mmcblk0]:[U-Boot 2018.09-00002-g0b54a51eee]:[location: dd MBR]
+bootloader:[eMMC-(default)]:[/dev/mmcblk1]:[U-Boot 2016.01-00001-g4eb802e]:[location: dd MBR]
+```
+
+Then go to [Flasher - eMMC: All BeagleBone Varients with eMMC section of the Ubuntu BeagleBone website](https://elinux.org/BeagleBoardUbuntu) and follow the instructions to update the eMMC bootloader.
+
 ## Software Configuration
 
 ### On Both VM and BBB

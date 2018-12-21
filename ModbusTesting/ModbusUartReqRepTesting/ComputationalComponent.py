@@ -26,7 +26,7 @@ InputRegs = namedtuple('InputRegs', ['outputCurrent','outputVolt','voltPhase','t
 HoldingRegs = namedtuple('HoldingRegs',['unused', 'startStopCmd', 'power'])
 '''For RIAPS future
 1.start/stop, 2.power command, 3. frequency shift from secondary control, 4. voltage magnitude shift from secondary control.
-HoldingRegs = namedtuple('HoldingRegs',['startStopCmd', 'powerCmd', 'freqShift', 'voltMagShift']) 
+HoldingRegs = namedtuple('HoldingRegs',['startStopCmd', 'powerCmd', 'freqShift', 'voltMagShift'])
 '''
 
 class ComputationalComponent(Component):
@@ -37,6 +37,8 @@ class ComputationalComponent(Component):
         self.pid = os.getpid()
         self.inputRegs = InputRegs(RegSet(0,45),RegSet(1,56),RegSet(2,78),RegSet(3,91))
         self.holdingRegs = HoldingRegs(RegSet(0,0),RegSet(1,55),RegSet(2,66))
+
+        self.message_sent = False
 
         if debugMode:
             self.logger.setLevel(logging.DEBUG)
@@ -52,14 +54,14 @@ class ComputationalComponent(Component):
         self.ModbusPending = 0
         self.ModbusReady = False
 
-        self.logger.info("ComputationalComponent: %s - starting",str(self.pid)) 
+        self.logger.info("ComputationalComponent: %s - starting",str(self.pid))
 
 
     def on_clock(self):
         now = self.clock.recv_pyobj()
         if debugMode:
             self.logger.info("on_clock()[%s]: %s",str(self.pid),str(now))
-        
+
         if not self.ModbusReady:
             # Setup status response port timeout
             self.modbusStatusReqPort.set_recv_timeout(5.0)
@@ -72,39 +74,43 @@ class ComputationalComponent(Component):
             # If status=true, set flag and restart clock
             try:
                 msg = "readytest"
-                self.modbusStatusReqPort.send_pyobj(msg)
-                self.logger.info("Modbus status requested")
-                modStatus = self.modbusStatusReqPort.recv_pyobj()
-                self.logger.info("Modbus status received")
-                if modStatus:
-                    self.ModbusReady = True
-                    self.logger.info("Modbus is ready, clock is restarted")
+                if not self.message_sent:
+                    self.modbusStatusReqPort.send_pyobj(msg)
+                    self.logger.info("Modbus status requested")
+                    self.message_sent = True
+                if self.message_sent:
+                    modStatus = self.modbusStatusReqPort.recv_pyobj()
+                    self.logger.info("Modbus status received")
+                    self.message_sent = False
+                    if modStatus:
+                        self.ModbusReady = True
+                        self.logger.info("Modbus is ready, clock is restarted")
             except PortError as e:
                 self.logger.info("on_clock-modbusStatusReq:port exception = %d" % e.errno)
                 if e.errno in (PortError.EAGAIN,PortError.EPROTO):
-                    self.logger.info("on_clock-modbusStatusReq: port error received")              
+                    self.logger.info("on_clock-modbusStatusReq: port error received")
             self.clock.launch()
             self.logger.info("clock restarted")
         else:
             '''Request:  Commands to send over Modbus - one command used at a time'''
-    
+
             '''Read/Write (holding only) a single register'''
             #self.command = CommandFormat(ModbusCommands.READ_INPUTREG,self.inputRegs.time.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
             #self.command = CommandFormat(ModbusCommands.READ_HOLDINGREG,self.holdingRegs.startStopCmd.idx,self.defaultNumOfRegs,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
             #self.values = [83]
             #self.command = CommandFormat(ModbusCommands.WRITE_HOLDINGREG,self.holdingRegs.power.idx,self.defaultNumOfRegs,self.values,self.defaultNumOfDecimals,self.signedDefault)
-    
+
             '''Read/Write all input registers'''
             numRegsToRead = len(self.inputRegs)
             self.command = CommandFormat(ModbusCommands.READMULTI_INPUTREGS,self.inputRegs.outputCurrent.idx,numRegsToRead,self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
-    
+
             '''Read/Write all holding registers'''
             #self.command = CommandFormat(ModbusCommands.READMULTI_HOLDINGREGS,self.holdingRegs.unused.idx,len(self.holdingRegs),self.dummyValue,self.defaultNumOfDecimals,self.signedDefault)
             #self.values = [75,67]
             #self.command = CommandFormat(ModbusCommands.WRITEMULTI_HOLDINGREGS,self.holdingRegs.startStopCmd.idx,2,self.values,self.defaultNumOfDecimals,self.signedDefault)
-    
+
             msg = self.command
-    
+
             '''Send Command'''
             if self.ModbusPending == 0:
                 if debugMode:
@@ -118,8 +124,8 @@ class ComputationalComponent(Component):
                     self.logger.info("on_clock-modbusCommand:send exception = %d" % e.errno)
                     if e.errno in (PortError.EAGAIN,PortError.EPROTO):
                         self.logger.info("on_clock-modbusCommand: port error received")
-    	
-    	
+
+
     def on_modbusCommandReqPort(self):
         '''Receive Response'''
         try:
@@ -129,7 +135,7 @@ class ComputationalComponent(Component):
             self.logger.info("on_modbusReqPort:send exception = %d" % e.errno)
             if e.errno in (PortError.EAGAIN,PortError.EPROTO):
                 self.logger.info("on_modbusReqPort: port error received")
-       
+
 #       pydevd.settrace(host='192.168.1.102',port=5678)
 
         if debugMode:

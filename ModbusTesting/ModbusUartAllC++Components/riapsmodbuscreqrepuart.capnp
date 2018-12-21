@@ -1,7 +1,24 @@
-@0x882e1c0f1af44d05;
-using Cxx = import "/capnp/c++.capnp";
-$Cxx.namespace("modbusuart::messages");
+@0x8cdee644dfe6421f;
 
+using Cxx = import "/capnp/c++.capnp";
+$Cxx.namespace("riapsmodbuscreqrepuart::messages");
+
+# riaps:keep_responseformat:begin
+struct ResponseFormat {
+    commandType @0: ModbusCommands;
+    registerAddress @1: UInt16;
+    numberOfRegs @2: UInt16;
+    values @3: List(UInt16);
+}
+# riaps:keep_responseformat:end
+
+# riaps:keep_logdata:begin
+struct LogData {
+    msg @0: Text;
+}
+# riaps:keep_logdata:end
+
+# riaps:keep_commandformat:begin
 enum ModbusCommands {
     noCmd @0;
     readCoilBits @1;
@@ -15,8 +32,7 @@ enum ModbusCommands {
     writeReadHoldingRegs @9;
 }
 
-struct CommandFormat
-{
+struct CommandFormat {
     commandType @0: ModbusCommands;
     registerAddress @1: UInt16;
     numberOfRegs @2: UInt16;
@@ -24,11 +40,4 @@ struct CommandFormat
     wreadRegAddress @4: UInt16;
     wreadNumOfRegs @5: UInt16;
 }
-
-struct ResponseFormat
-{
-    commandType @0: ModbusCommands;
-    registerAddress @1: UInt16;
-    numberOfRegs @2: UInt16;
-    values @3: List(UInt16);
-}
+# riaps:keep_commandformat:end

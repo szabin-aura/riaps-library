@@ -15,13 +15,66 @@ The C++ Components in this project are:
   The application developer should not edit these files.  Any changes to the model file will
   override any edits to these files.
 
-
-
 ## Developer
 * Mary Metelko, Vanderbilt University
 
 ## BBB Software Setup Requirements
-   For InfluxDB: On BBB or VM (where logging is happening)
+
+### Install libmodbus
+
+    This library should be installed on the machine where the library will be built and on the BBBs where the library will be call from the RIAPS Modbus UART shared library.
+
+    - To build on the BBBs:
+
+    ```
+    git clone https://github.com/cmjones01/libmodbus.git
+    sudo apt-get install autoconf libtool pkg-config
+    cd libmodbus
+    ./autogen.sh
+    ./configure
+    make
+
+        libmodbus 3.1.2
+        ===============
+        prefix:                 /usr/local
+        sysconfdir:             ${prefix}/etc
+        libdir:                 ${exec_prefix}/lib
+        includedir:             ${prefix}/include
+
+    sudo make install
+
+    `----------------------------------------------------------------
+    Libraries have been installed in:
+        /usr/local/lib
+    `----------------------------------------------------------------
+    ```
+
+    - To cross-compile on the development machine, libmodbus needs to be cross compiled on the VM.  The above method applies,
+    but use the following configuration statement.
+
+    ```
+    ac_cv_func_malloc_0_nonnull=yes ./configure --host=arm-linux-gnueabihf --prefix=/opt/riaps/armhf
+    ```
+
+    which setups the following:
+
+    ```
+    libmodbus 3.1.2
+        ===============
+        prefix:                 /opt/riaps/armhf
+        sysconfdir:             ${prefix}/etc
+        libdir:                 ${exec_prefix}/lib
+        includedir:             ${prefix}/include
+
+    ```
+
+
+> Note: cmjones01 fork was used to allow option for asynchronous operation in the future
+- See https://martin-jones.com/2015/12/16/modifying-libmodbus-for-asynchronous-operation/
+
+### Install InfluxDB for Logger
+
+   Install on BBB or VM (where logging is happening)
 
 ```
 curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -      
@@ -36,6 +89,10 @@ sudo systemctl start influxdb
 ```
 sudo pip3 install influxdb
 ```
+
+### Eclipse Project Properties Additions
+
+Include the **/usr/local/include/modbus** in the project properties include paths (C/C++ General --> Path and Symbols) 
 
 ## UART Configuration
 * port = 'UART2'

@@ -1,101 +1,123 @@
+
+
+
 #include <ComputationalComponent.h>
+// riaps:keep_header:begin
+
+// riaps:keep_header:end
 
 namespace riapsmodbuscreqrepuart {
-   namespace components {
-      
-      ComputationalComponent::ComputationalComponent(const py::object *parent_actor,
-                                                     const py::dict actor_spec,
-                                                     const py::dict type_spec,
-                                                     const std::string &name,
-                                                     const std::string &type_name,
-                                                     const py::dict args,
-                                                     const std::string &application_name,
-                                                     const std::string &actor_name) :
-      ComputationalComponentBase(parent_actor, actor_spec, type_spec, name, type_name, args, application_name,
-                                 actor_name) {
-          PID = getpid();
-          debugMode = true;
+    namespace components {
 
-          if (debugMode) {
-              component_logger()->set_level(spdlog::level::level_enum::debug);
-          } else {
-              component_logger()->set_level(spdlog::level::level_enum::info);
-          }
+        // riaps:keep_construct:begin
+        ComputationalComponent::ComputationalComponent(const py::object*  parent_actor     ,
+                      const py::dict     actor_spec       ,
+                      const py::dict     type_spec        ,
+                      const std::string& name             ,
+                      const std::string& type_name        ,
+                      const py::dict     args             ,
+                      const std::string& application_name ,
+                      const std::string& actor_name       )
+            : ComputationalComponentBase(parent_actor, actor_spec, type_spec, name, type_name, args, application_name, actor_name) {
+            PID_ = getpid();
+            debug_mode_ = true;
 
-          // Setup Modbus Data Registers
-          nb_holdingRegs = 3;
-          nb_inputRegs = 4;
-          holdingRegs = std::unique_ptr<uint16_t[]>(new uint16_t[nb_holdingRegs]);
-          inputRegs = std::unique_ptr<uint16_t[]>(new uint16_t[nb_inputRegs]);
+            if (debug_mode_) {
+                component_logger()->set_level(spdlog::level::level_enum::debug);
+            } else {
+                component_logger()->set_level(spdlog::level::level_enum::info);
+            }
 
-          inputRegs[0] = 45;
-          for (int idx=1; idx < nb_inputRegs; idx++) {
-              inputRegs[idx] = inputRegs[idx-1] + 5;
-          }
+            // Setup Modbus Data Registers
+            nb_holding_regs_ = 3;
+            nb_input_regs_ = 4;
+            holding_regs_ = std::unique_ptr<uint16_t[]>(new uint16_t[nb_holding_regs_]);
+            input_regs_ = std::unique_ptr<uint16_t[]>(new uint16_t[nb_input_regs_]);
 
-          holdingRegs[0] = 54;
-          for (int idx=1; idx < nb_holdingRegs; idx++) {
-              holdingRegs[idx] = holdingRegs[idx-1] + 5;
-          }
+            input_regs_[0] = 45;
+            for (int idx=1; idx < nb_input_regs_; idx++) {
+                input_regs_[idx] = input_regs_[idx-1] + 5;
+            }
 
-          // Setup Commands
-          openReq = false;
+            holding_regs_[0] = 54;
+            for (int idx=1; idx < nb_holding_regs_; idx++) {
+                holding_regs_[idx] = holding_regs_[idx-1] + 5;
+            }
 
-          int resResult = clock_getres(CLOCK_MONOTONIC, &resolution);
+            // Setup Commands
+            open_req_ = false;
 
-          if (resResult != 0) {
-              component_logger()->debug("Error occurred {}", strerror(errno));
-              exit(errno);
-          }
+            int res_result = clock_getres(CLOCK_MONOTONIC, &resolution_);
 
-          component_logger()->info("ComputationalComponent: {} - starting",PID);
-      }
-      
-      void ComputationalComponent::OnClock(riaps::ports::PortBase *port) {
-          component_logger()->debug("{}: ComputationalComponent::OnClock(): port={}", PID, port->GetPortName());
+            if (res_result != 0) {
+                component_logger()->debug("Error occurred {}", strerror(errno));
+                exit(errno);
+            }
 
-          if (!openReq) {
-              clock_gettime(CLOCK_MONOTONIC, &preobservations);
-              capnp::MallocMessageBuilder messageRepBuilder;
-              auto msgModbusCommand = messageRepBuilder.initRoot<modbusuart::messages::CommandFormat>();
-              msgModbusCommand.setCommandType(modbusuart::messages::ModbusCommands::READ_HOLDING_REGS);
-              msgModbusCommand.setRegisterAddress(0);
-              msgModbusCommand.setNumberOfRegs(
-                      nb_holdingRegs);  // for writes, this value is 1 if successful, -1 if failed
+            component_logger()->info("ComputationalComponent: {} - starting",PID_);
+        }
+        // riaps:keep_construct:end
 
-              auto values = msgModbusCommand.initValues(nb_holdingRegs);
+        void ComputationalComponent::OnModbusreqport() {
+            // riaps:keep_onmodbusreqport:begin
+            auto [msg, err] = RecvModbusreqport();
+            // Receive Response
+            component_logger()->debug("Begin on_modbusReqPort()");
 
-              for (int i = 0; i <= nb_holdingRegs; i++) {
-                  values.set(i, (uint16_t) holdingRegs.get()[i]);
-              }
+            open_req_ = false;
 
-              // Send command back to modbus device component
-              component_logger()->warn_if(!SendModbusReqPort(messageRepBuilder, msgModbusCommand),
-                               "{}: Couldn't send command message", PID);
-              openReq = true;
-          } else {
-              component_logger()->debug("There is an open request, did not send a new request this clock cycle");
-          }
-      }
-      
-      bool ComputationalComponent::RecvModbusReqPort(modbusuart::messages::ResponseFormat::Reader &message) {
+            if (debug_mode_) {
+                clock_gettime(CLOCK_MONOTONIC, &postobservations_);
+                system_time_sub(&postobservations_, &preobservations_, &result_);
+                component_logger()->debug("Command to data: tv.sec={} tv_nsec={}", result_.tv_sec,
+                               ((double) result_.tv_nsec) / NSEC_PER_SEC);
+            }
 
-          // Receive Response
-          component_logger()->debug("Begin on_modbusReqPort()");
+            component_logger()->debug("End on_modbusReqPort()");
+            // riaps:keep_onmodbusreqport:end
+        }
 
-          openReq = false;
+        void ComputationalComponent::OnClock() {
+            // riaps:keep_onclock:begin
+            auto msg = RecvClock();
+            component_logger()->debug("{}: ComputationalComponent::OnClock(): port={}", PID_, port->GetPortName());
 
-          if (debugMode) {
-              clock_gettime(CLOCK_MONOTONIC, &postobservations);
-              system_time_sub(&postobservations, &preobservations, &result);
-              component_logger()->debug("Command to data: tv.sec={} tv_nsec={}", result.tv_sec,
-                             ((double) result.tv_nsec) / NSEC_PER_SEC);
-          }
+            if (!openReq) {
+                clock_gettime(CLOCK_MONOTONIC, &preobservations_);
+                capnp::MallocMessageBuilder messageRepBuilder;
+                auto msgModbusCommand = messageRepBuilder.initRoot<modbusuart::messages::CommandFormat>();
+                msgModbusCommand.setCommandType(modbusuart::messages::ModbusCommands::READ_HOLDING_REGS);
+                msgModbusCommand.setRegisterAddress(0);
+                msgModbusCommand.setNumberOfRegs(
+                        nb_holdingRegs);  // for writes, this value is 1 if successful, -1 if failed
 
-          component_logger()->debug("End on_modbusReqPort()");
-      }
+                auto values = msgModbusCommand.initValues(nb_holding_regs_);
 
-   }
+                for (int i = 0; i <= nb_holding_regs_; i++) {
+                    values.set(i, (uint16_t) holding_regs_.get()[i]);
+                }
+
+                // Send command back to modbus device component
+                component_logger()->warn_if(!SendModbusReqPort(messageRepBuilder, msgModbusCommand),
+                                 "{}: Couldn't send command message", PID_);
+                open_req_ = true;
+            } else {
+                component_logger()->debug("There is an open request, did not send a new request this clock cycle");
+            }
+            // riaps:keep_onclock:end
+        }
+
+        // riaps:keep_impl:begin
+
+        // riaps:keep_impl:end
+
+        // riaps:keep_destruct:begin
+        ComputationalComponent::~ComputationalComponent() {
+
+        }
+        // riaps:keep_destruct:end
+
+    }
 }
 
 std::unique_ptr<riapsmodbuscreqrepuart::components::ComputationalComponent>
@@ -108,8 +130,8 @@ create_component_py(const py::object *parent_actor,
                     const std::string &application_name,
                     const std::string &actor_name) {
     auto ptr = new riapsmodbuscreqrepuart::components::ComputationalComponent(parent_actor, actor_spec, type_spec, name, type_name, args,
-                                                   application_name,
-                                                   actor_name);
+                                                                     application_name,
+                                                                     actor_name);
     return std::move(std::unique_ptr<riapsmodbuscreqrepuart::components::ComputationalComponent>(ptr));
 }
 
@@ -127,6 +149,7 @@ PYBIND11_MODULE(libcomputationalcomponent, m) {
     testClass.def("handleNetLimit"        , &riapsmodbuscreqrepuart::components::ComputationalComponent::HandleNetLimit);
     testClass.def("handleNICStateChange"  , &riapsmodbuscreqrepuart::components::ComputationalComponent::HandleNICStateChange);
     testClass.def("handlePeerStateChange" , &riapsmodbuscreqrepuart::components::ComputationalComponent::HandlePeerStateChange);
+    testClass.def("handleReinstate"       , &riapsmodbuscreqrepuart::components::ComputationalComponent::HandleReinstate);
 
     m.def("create_component_py", &create_component_py, "Instantiates the component from python configuration");
 }

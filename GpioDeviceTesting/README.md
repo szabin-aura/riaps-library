@@ -7,7 +7,7 @@ The current testing applications are:
     - GPIO on Expansion Pin (P8) is used
 
 
-The Reusable Device Component code is located in GpioPyDevice.  An example application using this component is under riaps-library/ModbusTesting/ModbusUartGpioIndicatorApp.
+Another example application using this GPIO Device component is under riaps-library/ModbusTesting/ModbusUartGpioIndicatorApp.
 
 # Developers
 - Tim Krentz, Vanderbilt University

@@ -13,20 +13,20 @@ app RIAPSModbusCReqRepUART
 
     // Modbus (UART) device interface - UART2
     //     considered the server for the request/response interaction
-    device ModbusUART (slaveaddress=10, port='UART2', baudrate=115200, numholdreg=3, numinputreg=4)
+    device ModbusUART (slaveaddress=10, port='UART2', baudrate=115200, numholdreg=3, numinputreg=4) in Cpp
     {
         rep modbusRepPort : (ModbusCommand,ModbusResponse);
         timer clock 10;
     }
 
     // Example Component to show Modbus I/F usage
-    component ComputationalComponent()
+    component ComputationalComponent() in Python
     {
         timer clock 4000;
         pub tx_modbusData : ModbusLogData ;                 // When data is ready,
         req modbusReqPort : (ModbusCommand,ModbusResponse); // Port used to communicate with the ModbusUartDevice
     }
-    component Logger(db_host='127.0.0.1', db_port=8086, db_name='MOdbusIO', db_user='riaps', db_password='riaps')
+    component Logger(db_host='127.0.0.1', db_port=8086, db_name='MOdbusIO', db_user='riaps', db_password='riaps') in Python
     {
         sub rx_modbusData : ModbusLogData;
     }

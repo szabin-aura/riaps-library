@@ -10,6 +10,7 @@ The GPIO device component utilizes Adafruit_BBIO for control of the GPIO pins
 Need to install this on the BBBs
     $ sudo pip3 install Adafruit_BBIO
 '''
+# riaps:keep_import:begin
 from riaps.run.comp import Component
 import os
 import logging
@@ -17,6 +18,7 @@ import threading
 import Adafruit_BBIO.GPIO as GPIO
 #import pydevd
 import zmq
+
 
 ''' Internal thread for GPIO hardware interaction '''
 class GpioDeviceThread(threading.Thread):
@@ -124,7 +126,7 @@ class GpioDeviceThread(threading.Thread):
     def terminate(self):
         self.terminated.set()
         self.logger.info('GpioDeviceThread terminating')
-
+# riaps:keep_import:end
 
 '''
 GPIO Device Component Options:
@@ -138,6 +140,7 @@ GPIO Device Component Options:
   Note:  edge triggering will not be implemented in the initial release of this device component (MM)
 '''
 class GpioDevice(Component):
+# riaps:keep_constr:begin
     def __init__(self,bbb_pin_name='P8_11',direction='OUT',pull_up_down='PUD_OFF',trigger_edge='RISING',initial_value=0,setup_delay=60):
         super().__init__()
         #super(GpioDevice, self).__init__()
@@ -154,9 +157,11 @@ class GpioDevice(Component):
 #        pydevd.settrace(host='192.168.1.102',port=5678)
         self.logger.info("@%s: %s %s %s ivalue=%d delay=%d [%d]", self.bbb_pin_name, self.direction, self.pull_up_down, self.trigger_edge, self.initial_value, self.setup_delay, self.pid)
         self.gpioDeviceThread = None                    # Cannot manipulate GPIOs in constructor or start threads
+# riaps:keep_constr:end
 
     ''' Clock used to start internal thread to talk with the device.
         Fires once and then is halted '''
+# riaps:keep_clock:begin
     def on_clock(self):
         now = self.clock.recv_pyobj()
         self.logger.info('PID(%s) - on_clock(): %s',str(self.pid),str(now))
@@ -167,14 +172,18 @@ class GpioDevice(Component):
             self.gpioDeviceThread.activate()
 
         self.clock.halt()
+# riaps:keep_clock:end
 
+# riaps:keep_trigger:begin
     ''' Internal thread response available, message sent back to requesting component using reply port '''
     def on_trigger(self):
         msg = self.trigger.recv_pyobj()
         self.logger.info("Received GpioDeviceThread response - %s",msg)
         self.gpioRepPort.send_pyobj(msg)
         self.logger.info("Sent response back from GPIO request")
+# riaps:keep_trigger:end
 
+# riaps:keep_gpioRepPort:begin
     ''' Received a request from a component to read or write to the device.
         Calls into internal thread with request. '''
     def on_gpioRepPort(self):
@@ -207,7 +216,9 @@ class GpioDevice(Component):
                 self.logger.info("on_gpioRepPort()[%s]: GPIO not available yet",str(self.pid))
                 msg = ('ERROR',-1)
                 self.gpioRepPort.send_pyobj(msg)
+# riaps:keep_gpioRepPort:end
 
+# riaps:keep_impl:begin
     def __destroy__(self):
         self.logger.info("(PID %s) - stopping GpioDevice",str(self.pid))
         if self.gpioDeviceThread != None:
@@ -215,3 +226,4 @@ class GpioDevice(Component):
             self.gpioDeviceThread.terminate()
             self.gpioDeviceThread.join()
             self.logger.info("destroyed")
+# riaps:keep_impl:end

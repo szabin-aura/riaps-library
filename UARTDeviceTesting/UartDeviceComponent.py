@@ -10,6 +10,7 @@ Add the below line to /boot/uEnv.txt and restart (for UART2 only)
 cape_enable=bone_capemgr.enable_partno=BB-UART2
 '''
 
+# riaps:keep_import:begin
 from riaps.run.comp import Component
 import logging
 import os
@@ -211,6 +212,8 @@ class UartDeviceThread(threading.Thread):
     def terminate(self):
         self.terminated.set()
         self.logger.info('UartDeviceThread terminating')
+# riaps:keep_import:end
+
 
 '''
 
@@ -221,6 +224,7 @@ UART Device Options:
 '''
 
 class UartDeviceComponent(Component):
+# riaps:keep_constr:begin
     def __init__(self, uart_port_name='UART2', baud_rate=9600):
         super().__init__()
         self.logger.setLevel(logging.DEBUG)
@@ -231,7 +235,9 @@ class UartDeviceComponent(Component):
         self.logger.info("UartDeviceComponent @%s: baudrate=%s [%d]",
                         self.uart_port_name, self.baud_rate, self.pid)
         self.UartDeviceThread = None
+# riaps:keep_constr:end
 
+# riaps:keep_impl:begin
     class Message(Enum):
         open = 0
         close = 1
@@ -243,6 +249,16 @@ class UartDeviceComponent(Component):
         get_break_condition = 7
         set_break_condition = 8
 
+    def __destroy__(self):
+        self.logger.info("__destroy__")
+        if self.UartDeviceThread != None:
+            self.UartDeviceThread.deactivate()
+            self.UartDeviceThread.terminate()
+            self.UartDeviceThread.join()
+            self.logger.info("destroyed")
+# riaps:keep_impl:end
+
+# riaps:keep_clock:begin
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time (as float)
         self.logger.info("on_clock()[%s]: %s",str(self.pid),now)
@@ -253,15 +269,9 @@ class UartDeviceComponent(Component):
             self.UartDeviceThread.activate()
 
         self.clock.halt()
+# riaps:keep_clock:end
 
-    def __destroy__(self):
-        self.logger.info("__destroy__")
-        if self.UartDeviceThread != None:
-            self.UartDeviceThread.deactivate()
-            self.UartDeviceThread.terminate()
-            self.UartDeviceThread.join()
-            self.logger.info("destroyed")
-
+# riaps:keep_impl:begin
     def on_data(self):
         msg = self.data.recv_pyobj()
         self.uartReadPub.send_pyobj(msg)
@@ -270,7 +280,9 @@ class UartDeviceComponent(Component):
     def on_command(self):
         msg = self.command.recv_pyobj()
         self.uartRepPort.send_pyobj(msg)
+# riaps:keep_impl:end
 
+# riaps:keep_uartrepport:begin
     def on_uartRepPort(self):
         msg = self.uartRepPort.recv_pyobj()
         if self.UartDeviceThread == None:
@@ -313,3 +325,4 @@ class UartDeviceComponent(Component):
                 self.logger.info("on_uartRepPort()[%s]: UART not available yet",str(self.pid))
                 msg = ('ERROR',-1)
                 self.uartRepPort.send_pyobj(msg)
+# riaps:keep_uartrepport:end

@@ -3,7 +3,7 @@
 > ***Note:  THIS PROJECT NEEDS UPDATING TO THE LATEST METHODS USING PYBIND***
 
 This application example shows how to create components using Python and interface with a C++
-shared library device (libmodbusuart.so that is available in the ModbusUartCDevice directory).  
+device component.  
 
 The Python Components in this project are:
 * ComputationalComponent.py - this is the application code that send and reads data to the Modbus Uart device component.

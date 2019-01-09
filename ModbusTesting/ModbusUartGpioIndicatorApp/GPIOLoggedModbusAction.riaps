@@ -1,59 +1,74 @@
 // Use Modbus UART Device, log send/receive with LED
-struct LogData
-{ 
-	msg: String;
-}
-message ModbusLogData : LogData;
-
 app GPIOLoggedModbusAction
-{ 
-	// Example Component to show Modbus I/F usage
-	component ComputationalComponent()
-	{
-		uses
-		{
-			device ModbusUART
-		} 
-		
-		timer clock 4000;
+{
+    message ModbusLogData;
+    message ModbusStatusRequest;  // send request to determine Modbus status
+    message ModbusStatus;         // provides Modbus status (True for open/ready, False for not connected)
+    message ModbusCommand;        // send Modbus action Request
+    message ModbusResponse;       // get response from Modbus action
+    message GpioCommand;          // send GPIO action Request
+    message GpioResponse;         // get response from GPIO action
+
+    library serialModbusLib;
+
+    // Modbus (UART) device interface - UART2
+    //     considered the server for the request/response interaction
+    device ModbusUART (slaveaddress=10, port='UART2', baudrate=115200, numholdreg=3, numinputreg=4) in C++ {
+        rep modbusStatusRepPort : (ModbusStatusRequest,ModbusStatus);
+        rep modbusRepPort : (ModbusCommand,ModbusResponse);
+        timer clock 10;
+    }
+
+    // GPIO Device - pin name (P8_pin# or P9_pin#), direction (IN or OUT) and pull_up_down (PUD_OFF, PUD_UP or PUD_DOWN)
+    //               the device setup defaults are defined here
+    //
+    // Both read and write requests will return the current value of the GPIO as a published DataValue
+    device GpioDevice(bbb_pin_name='P8_11', direction='OUT', pull_up_down='PUD_OFF', setup_delay=60) in Python {
+        // Inside port for forwarding messages coming from an internal thread.
+        // The 'default' is optional, it implies a 1 sec timer/ticker thread.
+        inside trigger;
+
+        timer clock 100;                      // Connect to GPIO on first clock
+        rep gpioRepPort : (GpioCommand, GpioResponse);
+    }
+
+    // Example Component to show Modbus I/F usage
+    component ComputationalComponent() in Python
+    {
+        timer clock 4000;
         pub tx_modbusData : ModbusLogData ;                 // When data is ready,
         req modbusReqPort : (ModbusCommand,ModbusResponse); // Port used to communicate with the ModbusUartDevice
-	}
-	
-//	component DataLogger(db_host='127.0.0.1', db_port=8086, db_name='MOdbusIO', db_user='riaps', db_password='riaps')
-//	{
-//		sub rx_modbusData : ModbusLogData;
-//	}
-	
-	component VisualLogger()
-	{
-		uses
-		{
-			device GpioDevice
-		}
-		
-		timer offTimer 1000;
-		sub rx_modbusData : ModbusLogData;
-    	req gpioReqPort : (GpioCommand, GpioResponse);
-	}
+    }
 
-//	actor ModbusLogger()
-//	{
-//		{
-//			logger : DataLogger(db_host='127.0.0.1', db_port=8086, db_name='ModbusIO', db_user='riaps', db_password='riaps');
-//		}
-//	}
+//    component DataLogger(db_host='127.0.0.1', db_port=8086, db_name='MOdbusIO', db_user='riaps', db_password='riaps') in Python
+//    {
+//        sub rx_modbusData : ModbusLogData;
+//    }
 
-    
-	// Modbus Communication Example actor
-	actor ModbusExampleActor()
-	{
-		local ModbusCommand,ModbusResponse,GpioCommand,GpioResponse; // Local message types
-		{
-			commInitiator : ComputationalComponent;
-			device modbusinstance : ModbusUART(slaveaddress=10, port='UART2', baudrate=115200, numholdreg=3, numinputreg=4)
-			visualFeedback : VisualLogger;
-			device gpioInstance : GpioDevice(bbb_pin_name='USR3', direction='OUT', pull_up_down='PUD_OFF', setup_delay=60)
-		}
-	}
+    component VisualLogger() in Python
+    {
+          timer offTimer 1000;
+          sub rx_modbusData : ModbusLogData;
+          req gpioReqPort : (GpioCommand, GpioResponse);
+    }
+
+//    actor ModbusLogger()
+//    {
+//        {
+//            logger : DataLogger(db_host='127.0.0.1', db_port=8086, db_name='ModbusIO', db_user='riaps', db_password='riaps');
+//        }
+//    }
+
+
+    // Modbus Communication Example actor
+    actor ModbusExampleActor()
+    {
+        local ModbusCommand,ModbusResponse,GpioCommand,GpioResponse; // Local message types
+        {
+            commInitiator : ComputationalComponent;
+            modbusinstance : ModbusUART(slaveaddress=10, port='UART2', baudrate=115200, numholdreg=3, numinputreg=4);
+            visualFeedback : VisualLogger;
+            gpioInstance : GpioDevice(bbb_pin_name='USR3', direction='OUT', pull_up_down='PUD_OFF', setup_delay=60);
+        }
+    }
 }

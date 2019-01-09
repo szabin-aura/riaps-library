@@ -15,7 +15,7 @@ class ToggleGpioComponent(Component):
         super().__init__()
         self.pid = os.getpid()
         self.setValue = 0  # default off
-        self.logger.info("ToggleGpioComponent: %s - starting",str(self.pid))
+        self.logger.info("ToggleGpioComponent: %s - starting" % str(self.pid))
         self.waiting = 0
         self.protectReq = threading.Semaphore()
         self.deviceActive = True
@@ -35,8 +35,8 @@ class ToggleGpioComponent(Component):
                 self.setValue = 0
             msg = ('write',self.setValue)
             self.gpioReqPort.send_pyobj(msg)
-            self.logger.info("on_toggle()[%s]: Send write request, setValue=%d",
-                            str(self.pid), self.setValue)
+            self.logger.info("on_toggle()[%s]: Send write request, setValue=%d" %
+                            (str(self.pid), self.setValue))
 # riaps:keep_toggle:end
 
 # riaps:keep_readValue:begin
@@ -45,7 +45,7 @@ class ToggleGpioComponent(Component):
         if self.deviceActive == False:
             return
         if self.protectReq.acquire(blocking = False):
-            self.logger.info("on_readValue()[%s]: %s",str(self.pid),repr(msg))
+            self.logger.info("on_readValue()[%s]: %s" % (str(self.pid),repr(msg)))
             msg = ('read',0)
             self.gpioReqPort.send_pyobj(msg)
 # riaps:keep_readValue:end
@@ -53,8 +53,8 @@ class ToggleGpioComponent(Component):
 # riaps:keep_gpioReqPort:begin
     def on_gpioReqPort(self):
         msg = self.gpioReqPort.recv_pyobj()
-        self.logger.info("on_gpioReqPort()[%s]: got reply : %s ",
-                        str(self.pid),repr(msg))
+        self.logger.info("on_gpioReqPort()[%s]: got reply : %s " %
+                        (str(self.pid),repr(msg)))
         self.protectReq.release()
 # riaps:keep_gpioReqPort:end
 

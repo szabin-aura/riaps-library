@@ -57,11 +57,11 @@ class GpioDeviceThread(threading.Thread):
         else:
             self.trigger_edge = GPIO.BOTH
 
-        self.logger.info("GpioDeviceThread [%s]: initialized",self.pid)
+        self.logger.info("GpioDeviceThread [%s]: initialized" % self.pid)
 
     ''' Main loop interacting with hardware pin'''
     def run(self):
-        self.logger.info('GpioDeviceThread starting')
+        self.logger.info("GpioDeviceThread starting")
         # Ask parent port to make a plug for this end
         self.plug = self.trigger.setupPlug(self)
         self.poller = zmq.Poller()
@@ -77,24 +77,24 @@ class GpioDeviceThread(threading.Thread):
             if self.active.is_set():
                 socks = dict(self.poller.poll())
                 if len(socks) == 0:
-                    self.logger.info('GpioDeviceThread timeout')
+                    self.logger.info("GpioDeviceThread timeout")
                 if self.terminated.is_set(): break
                 if self.plug in socks and socks[self.plug] == zmq.POLLIN:
                     message = self.plug.recv_pyobj()
 
                     if 'write' in message:
                         GPIO.output(self.component.bbb_pin_name, message[1])
-                        self.logger.info("GpioDeviceThread - value written to GPIO %s: %s",
-                                                    self.component.bbb_pin_name, str(message[1]))
+                        self.logger.info("GpioDeviceThread - value written to GPIO %s: %s" %
+                                                    (self.component.bbb_pin_name, str(message[1])))
                         self.plug.send_pyobj(('write',message[1]))
 
                     elif 'read' in message:
                         val = GPIO.input(self.component.bbb_pin_name)
-                        self.logger.info("GpioDeviceThread - value read from GPIO %s: %s",
-                                                    self.component.bbb_pin_name, val)
+                        self.logger.info("GpioDeviceThread - value read from GPIO %s: %s" %
+                                                    (self.component.bbb_pin_name, val))
                         self.plug.send_pyobj(('read',val))
 
-        self.logger.info('GpioDeviceThread ended')
+        self.logger.info("GpioDeviceThread ended")
 
 
     def isGpioAvailable(self):
@@ -102,30 +102,30 @@ class GpioDeviceThread(threading.Thread):
 
     ''' Setup GPIO pin indicated '''
     def enableGpio(self):
-        self.component.logger.info("GpioDeviceThread setting up GPIO=%s: direction=%s resistor=%s trigger=%s ivalue=%d delay=%d [%d]",
-                                    self.component.bbb_pin_name, self.component.direction, self.component.pull_up_down,
-                                    self.component.trigger_edge, self.component.initial_value, self.component.setup_delay, self.pid)
+        self.component.logger.info("GpioDeviceThread setting up GPIO=%s: direction=%s resistor=%s trigger=%s ivalue=%d delay=%d [%d]" %
+                                    (self.component.bbb_pin_name, self.component.direction, self.component.pull_up_down,
+                                    self.component.trigger_edge, self.component.initial_value, self.component.setup_delay, self.pid))
         GPIO.setup(self.component.bbb_pin_name, self.direction, self.pull_up_down,
                     self.component.initial_value, self.component.setup_delay)
         self.gpioAvailable = True
-        self.logger.info("GpioDeviceThread GPIO=%s setup and available for use", self.component.bbb_pin_name)
+        self.logger.info("GpioDeviceThread GPIO=%s setup and available for use" % self.component.bbb_pin_name)
 
     def disableGpio(self):
         GPIO.cleanup(self.component.bbb_pin_name)
         self.gpioAvailable = False
-        self.logger.info("GpioDeviceThread - disabled GPIO: %s",self.component.bbb_pin_name)
+        self.logger.info("GpioDeviceThread - disabled GPIO: %s" % self.component.bbb_pin_name)
 
     def activate(self):
         self.active.set()
-        self.logger.info('GpioDeviceThread activated')
+        self.logger.info("GpioDeviceThread activated")
 
     def deactivate(self):
         self.active.clear()
-        self.logger.info('GpioDeviceThread deactivated')
+        self.logger.info("GpioDeviceThread deactivated")
 
     def terminate(self):
         self.terminated.set()
-        self.logger.info('GpioDeviceThread terminating')
+        self.logger.info("GpioDeviceThread terminating")
 # riaps:keep_import:end
 
 '''
@@ -145,7 +145,7 @@ class GpioDevice(Component):
         super().__init__()
         #super(GpioDevice, self).__init__()
         self.pid = os.getpid()
-        self.logger.info("(PID %s) - starting GpioDevice",str(self.pid))
+        self.logger.info("(PID %s) - starting GpioDevice" % str(self.pid))
         self.logger.setLevel(logging.DEBUG)
         self.pid = os.getpid()
         self.bbb_pin_name = bbb_pin_name
@@ -155,7 +155,7 @@ class GpioDevice(Component):
         self.initial_value = initial_value
         self.setup_delay = setup_delay
 #        pydevd.settrace(host='192.168.1.102',port=5678)
-        self.logger.info("@%s: %s %s %s ivalue=%d delay=%d [%d]", self.bbb_pin_name, self.direction, self.pull_up_down, self.trigger_edge, self.initial_value, self.setup_delay, self.pid)
+        self.logger.info("@%s: %s %s %s ivalue=%d delay=%d [%d]" % (self.bbb_pin_name, self.direction, self.pull_up_down, self.trigger_edge, self.initial_value, self.setup_delay, self.pid))
         self.gpioDeviceThread = None                    # Cannot manipulate GPIOs in constructor or start threads
 # riaps:keep_constr:end
 
@@ -164,7 +164,7 @@ class GpioDevice(Component):
 # riaps:keep_clock:begin
     def on_clock(self):
         now = self.clock.recv_pyobj()
-        self.logger.info('PID(%s) - on_clock(): %s',str(self.pid),str(now))
+        self.logger.info("PID(%s) - on_clock(): %s" % (str(self.pid),str(now)))
         if self.gpioDeviceThread == None:
             self.logger.info("No thread, init the thread")
             self.gpioDeviceThread = GpioDeviceThread(self,self.trigger)
@@ -178,7 +178,7 @@ class GpioDevice(Component):
     ''' Internal thread response available, message sent back to requesting component using reply port '''
     def on_trigger(self):
         msg = self.trigger.recv_pyobj()
-        self.logger.info("Received GpioDeviceThread response - %s",msg)
+        self.logger.info("Received GpioDeviceThread response - %s" % msg)
         self.gpioRepPort.send_pyobj(msg)
         self.logger.info("Sent response back from GPIO request")
 # riaps:keep_trigger:end
@@ -188,9 +188,9 @@ class GpioDevice(Component):
         Calls into internal thread with request. '''
     def on_gpioRepPort(self):
         msg = self.gpioRepPort.recv_pyobj()
-        self.logger.info("PID (%s) - on_gpioRepPort() received:%s",str(self.pid),str(msg))
+        self.logger.info("PID (%s) - on_gpioRepPort() received:%s" % (str(self.pid),str(msg)))
         if self.gpioDeviceThread == None:
-            self.logger.info("on_gpioRepPort()[%s]: gpioDeviceThread not available yet",str(self.pid))
+            self.logger.info("on_gpioRepPort()[%s]: gpioDeviceThread not available yet" % (str(self.pid)))
             msg = ('ERROR',-1)
             self.gpioRepPort.send_pyobj(msg)
         else:
@@ -198,29 +198,29 @@ class GpioDevice(Component):
                 msgType, msgVal = msg
                 if msgType == 'read':
                     self.trigger.send_pyobj('read')
-                    self.logger.info("on_gpioRepPort()[%s]: %s",str(self.pid),repr(msg))
+                    self.logger.info("on_gpioRepPort()[%s]: %s" % (str(self.pid),repr(msg)))
 
                 elif msgType == 'write':
                     if msgVal == 1 or msgVal == 0:
                         self.trigger.send_pyobj((msgType,msgVal))
-                        self.logger.info("on_gpioRepPort()[%s]: %s",str(self.pid),repr(msg))
+                        self.logger.info("on_gpioRepPort()[%s]: %s" % (str(self.pid),repr(msg)))
                     else:
-                        self.logger.info("on_gpioRepPort()[%s]: invalid write value",str(self.pid))
+                        self.logger.info("on_gpioRepPort()[%s]: invalid write value" % str(self.pid))
                         msg = ('ERROR',-1)
                         self.gpioRepPort.send_pyobj(msg)
                 else:
-                    self.logger.info("on_gpioRepPort()[%s]: unsupported request=%s",str(self.pid),repr(msg))
+                    self.logger.info("on_gpioRepPort()[%s]: unsupported request=%s" % (str(self.pid),repr(msg)))
                     msg = ('ERROR',-1)
                     self.gpioRepPort.send_pyobj(msg)
             else:
-                self.logger.info("on_gpioRepPort()[%s]: GPIO not available yet",str(self.pid))
+                self.logger.info("on_gpioRepPort()[%s]: GPIO not available yet" % str(self.pid))
                 msg = ('ERROR',-1)
                 self.gpioRepPort.send_pyobj(msg)
 # riaps:keep_gpioRepPort:end
 
 # riaps:keep_impl:begin
     def __destroy__(self):
-        self.logger.info("(PID %s) - stopping GpioDevice",str(self.pid))
+        self.logger.info("(PID %s) - stopping GpioDevice" % str(self.pid))
         if self.gpioDeviceThread != None:
             self.gpioDeviceThread.deactivate()
             self.gpioDeviceThread.terminate()

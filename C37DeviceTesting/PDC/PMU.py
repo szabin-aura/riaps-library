@@ -63,14 +63,14 @@ class PMU(Component):
         self.pid = os.getpid()
         self.pmu_ip = pmu_ip
         self.pmu_port = pmu_port
-        self.logger.info("PMU @%s:%d [%d]", pmu_ip, pmu_port, self.pid)
+        self.logger.info("PMU @%s:%d [%d]" % (pmu_ip,pmu_port,self.pid))
         self.pmuThread = None                    # Cannot manipulate ports in constructor or start threads
 # riaps:keep_constr:end
 
 # riaps:keep_clock:begin
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time (as float)
-        self.logger.info('on_clock():%s',now)
+        self.logger.info("on_clock():%s" % now)
         if self.pmuThread == None:
             self.pmuThread = PMUThread(self)
             self.pmuThread.start()
@@ -85,6 +85,6 @@ class PMU(Component):
 # riaps:keep_queue:begin
     def on_queue(self):                   # Internally triggered op
         dataFrame = self.queue.recv_pyobj()     # Receive time (as float)
-        self.logger.info('on_queue()')
+        self.logger.info("on_queue()")
         self.pmuData.send_pyobj(dataFrame)
 # riaps:keep_queue:end

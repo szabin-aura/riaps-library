@@ -57,22 +57,22 @@ class ModbusUartReqRepDevice(Component):
         elif port == 'UART5':
             self.port = '/dev/ttyO5'
         else:
-            self.logger.error('__init__[%s]: Invalid UART argument, use UART1..5', self.pid)
+            self.logger.error("__init__[%s]: Invalid UART argument, use UART1..5" % self.pid)
             sys.exit(-1)
 
         self.port_config = PortConfig(self.port, baudrate, bytesize, parity, stopbits, serialTimeout)
         self.slaveAddressDecimal = slaveaddress
         self.modbus = SerialModbusComm(self,self.slaveAddressDecimal,self.port_config)
         if debugMode:
-            self.logger.info("Modbus settings %d @%s:%d %d%s%d [%d]", self.slaveAddressDecimal,self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.pid)
+            self.logger.info("Modbus settings %d @%s:%d %d%s%d [%d]" % (self.slaveAddressDecimal,self.port_config.portname,self.port_config.baudrate,self.port_config.bytesize,self.port_config.parity,self.port_config.stopbits,self.pid))
 
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time (as float)
-        self.logger.info("on_clock()[%s]: %s",str(self.pid),now)
+        self.logger.info("on_clock()[%s]: %s" % (str(self.pid),now))
 
         if debugMode:
             t0 = time.perf_counter()
-            self.logger.debug("on_clock()[%s]: Request Modbus start at %f",str(self.pid),t0)
+            self.logger.debug("on_clock()[%s]: Request Modbus start at %f" % (str(self.pid),t0))
 
         if self.modbus.isModbusAvailable() == False:
             self.modbus.startModbus()
@@ -80,7 +80,7 @@ class ModbusUartReqRepDevice(Component):
 
             if debugMode:
                 t1 = time.perf_counter()
-                self.logger.debug("on_clock()[%s]: Modbus ready at %f, time to start Modbus is %f ms",str(self.pid),t1,(t1-t0)*1000)
+                self.logger.debug("on_clock()[%s]: Modbus ready at %f, time to start Modbus is %f ms" % (str(self.pid),t1,(t1-t0)*1000))
 
             self.clock.halt()
 
@@ -94,14 +94,14 @@ class ModbusUartReqRepDevice(Component):
     '''
     def on_modbusStatusRepPort(self):
         statusRequest = self.modbusStatusRepPort.recv_pyobj()
-        
+
         if debugMode:
             self.logger.info("Request for Modbus device status received")
-            
+
         msg = str(self.modbus.isModbusAvailable())
         self.modbusStatusRepPort.send_pyobj(msg)
 
-    '''    
+    '''
     Receive a Modbus command request.  Process command and send back response.
     '''
     def on_modbusCommandRepPort(self):
@@ -110,7 +110,7 @@ class ModbusUartReqRepDevice(Component):
 
         if debugMode:
             self.modbusReqRxTime = time.perf_counter()
-            #self.logger.debug("on_modbusRepPort()[%s]: Request=%s Received at %f",str(self.pid),commandRequest,self.modbusReqRxTime)
+            #self.logger.debug("on_modbusRepPort()[%s]: Request=%s Received at %f" % (str(self.pid),commandRequest,self.modbusReqRxTime))
 
         self.unpackCommand(commandRequest)
         responseValue = -1  # invalid response
@@ -119,10 +119,10 @@ class ModbusUartReqRepDevice(Component):
 
             '''if debugMode:
                 t1 = time.perf_counter()
-                self.logger.debug("on_modbusRepPort()[%s]: Send Modbus response=%s back to requester at %f",str(self.pid),responseValue,t1)'''
+                self.logger.debug("on_modbusRepPort()[%s]: Send Modbus response=%s back to requester at %f" % (str(self.pid),responseValue,t1))'''
         else:
             self.logger.debug("Modbus is not available")
-            
+
         '''Send Results'''
         self.modbusCommandRepPort.send_pyobj(responseValue)
 #        pydevd.settrace(host='192.168.1.102',port=5678)
@@ -166,7 +166,6 @@ class ModbusUartReqRepDevice(Component):
 
         if debugMode:
             t1 = time.perf_counter()
-            self.logger.debug("sendModbusCommand()[%s]: Modbus library command complete at %f, time to interact with Modbus library is %f ms",str(self.pid),t1,(t1-t0)*1000)
+            self.logger.debug("sendModbusCommand()[%s]: Modbus library command complete at %f, time to interact with Modbus library is %f ms" % (str(self.pid),t1,(t1-t0)*1000))
 
         return value
-

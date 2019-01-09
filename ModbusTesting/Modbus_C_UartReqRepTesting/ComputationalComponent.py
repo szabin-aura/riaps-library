@@ -21,15 +21,15 @@ InputRegs = namedtuple('InputRegs', ['outputCurrent','outputVolt','voltPhase','t
 HoldingRegs = namedtuple('HoldingRegs',['unused', 'startStopCmd', 'power'])
 '''For RIAPS future
 1.start/stop, 2.power command, 3. frequency shift from secondary control, 4. voltage magnitude shift from secondary control.
-HoldingRegs = namedtuple('HoldingRegs',['startStopCmd', 'powerCmd', 'freqShift', 'voltMagShift']) 
+HoldingRegs = namedtuple('HoldingRegs',['startStopCmd', 'powerCmd', 'freqShift', 'voltMagShift'])
 '''
 
 class ComputationalComponent(Component):
     def __init__(self):
-        super(ComputationalComponent, self).__init__()	 
-        #pydevd.settrace(host='192.168.1.103',port=5678)  
+        super(ComputationalComponent, self).__init__()
+        #pydevd.settrace(host='192.168.1.103',port=5678)
         self.pid = os.getpid()
-        
+
         self.inputRegs = InputRegs(RegSet(0,45),RegSet(1,56),RegSet(2,78),RegSet(3,91))
         self.holdingRegs = HoldingRegs(RegSet(0,0),RegSet(1,55),RegSet(2,66))
 
@@ -46,14 +46,13 @@ class ComputationalComponent(Component):
         self.dummyHoldingRegValues = [0,1,2]
         self.successfulWrite = 1
         self.openReq = False
+        self.logger.info("(PID %s) - starting ComputationalComponent" % str(self.pid))
 
-        self.logger.info("(PID %s) - starting ComputationalComponent",str(self.pid))
-        
-    
+
     def on_clock(self):
         now = self.clock.recv_pyobj()
-        self.logger.info('PID(%s) - on_clock(): %s',str(self.pid),str(now))
-            
+        self.logger.info("PID(%s) - on_clock(): %s" % (str(self.pid),str(now)))
+
         '''Setup a Capnp Message'''
         command = CommandFormat_capnp.CommandFormat.new_message()
 
@@ -63,24 +62,24 @@ class ComputationalComponent(Component):
         #command.commandType = ModbusCommands_capnp.ModbusCommands.readInputRegs
         #command.registerAddress = self.inputRegs.outputCurrent.idx
         #command.numberOfRegs = len(self.inputRegs)
-        
+
         '''Read a single holding register'''
         #command.commandType = ModbusCommands_capnp.ModbusCommands.readHoldingRegs
         #command.registerAddress = self.holdingRegs.startStopCmd.idx
         #command.numberOfRegs = self.defaultNumOfRegs
-        
+
         '''Write a single holding register'''
         #self.values = [83]
         #command.commandType = ModbusCommands_capnp.ModbusCommands.writeHoldingReg
         #command.registerAddress = self.holdingRegs.startStopCmd.idx
         #command.numberOfRegs = self.defaultNumOfRegs
         #command.values = self.values
-        
+
         '''Read all holding registers'''
         command.commandType = ModbusCommands_capnp.ModbusCommands.readHoldingRegs
         command.registerAddress = self.holdingRegs.unused.idx
         command.numberOfRegs = len(self.holdingRegs)
-        
+
         '''Write multiple holding registers'''
         #self.values = [75,67]
         #command.commandType = ModbusCommands_capnp.ModbusCommands.writeMultiHoldingRegs
@@ -102,8 +101,8 @@ class ComputationalComponent(Component):
 
         if not self.openReq:
             #self.cmdSendStartTime = time.perf_counter()
-            #self.logger.debug("on_clock()[%s]: Send command to ModbusUartDevice at %f",str(self.pid),self.cmdSendStartTime)
-            self.logger.debug("on_clock()[%s]: Send command to ModbusUartDevice",str(self.pid))
+            #self.logger.debug("on_clock()[%s]: Send command to ModbusUartDevice at %f" % (str(self.pid),self.cmdSendStartTime))
+            self.logger.debug("on_clock()[%s]: Send command to ModbusUartDevice" % str(self.pid))
             if self.modbusReqPort.send_capnp(cmdBytes):
                 #self.logger.debug("Sent Request")
                 self.openReq = True
@@ -112,7 +111,7 @@ class ComputationalComponent(Component):
         else:
             self.logger.info("There is an open request, did not send a new request this clock cycle")
 
-    
+
     def on_modbusReqPort(self):
         '''Receive Response'''
         bytes = self.modbusReqPort.recv_capnp()
@@ -123,7 +122,7 @@ class ComputationalComponent(Component):
 
         #if debugMode:
         #self.cmdResultsRxTime = time.perf_counter()
-        #self.logger.info("on_modbusReqPort()[%s]: Received Modbus data=%s, time from cmd to data is %f ms",str(self.pid),repr(response),(self.cmdResultsRxTime-self.cmdSendStartTime)*1000)
+        #self.logger.info("on_modbusReqPort()[%s]: Received Modbus data=%s, time from cmd to data is %f ms" % (str(self.pid),repr(response),(self.cmdResultsRxTime-self.cmdSendStartTime)*1000))
 
         if response.commandType == ModbusCommands_capnp.ModbusCommands.readInputRegs or response.commandType == ModbusCommands_capnp.ModbusCommands.readHoldingRegs:
             strList = []
@@ -152,6 +151,6 @@ class ComputationalComponent(Component):
 
         self.logger.debug("End on_modbusReqPort()")
 
-    
-    def __destroy__(self):			
-        self.logger.info("(PID %s) - stopping ComputationalComponent, %s",str(self.pid))   	        	        
+
+    def __destroy__(self):
+        self.logger.info("(PID %s) - stopping ComputationalComponent, %s" % str(self.pid))

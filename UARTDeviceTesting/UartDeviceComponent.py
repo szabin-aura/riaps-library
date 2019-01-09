@@ -39,7 +39,7 @@ class UartDeviceThread(threading.Thread):
         self.readingActive = False
         self.readBuffer = bytes(0)
 
-        self.logger.info("UartDeviceThread [%s]: init",self.pid)
+        self.logger.info("UartDeviceThread [%s]: init" % self.pid)
 
         # Convert input configurations into enums that represent the requests
         if self.component.uart_port_name == 'UART1':
@@ -53,12 +53,12 @@ class UartDeviceThread(threading.Thread):
         elif self.component.uart_port_name == 'UART5':
             self.serial_port = '/dev/ttyO5'
         else:
-            self.logger.error('UartDeviceThread [%s]: Invalid UART'
-                              ' argument, use UART1..5', self.pid)
+            self.logger.error("UartDeviceThread [%s]: Invalid UART"
+                              " argument, use UART1..5" % self.pid)
             self.terminated.set()
 
     def run(self):
-        self.logger.info('UartDeviceThread starting')
+        self.logger.info("UartDeviceThread starting")
         self.plug = self.command.setupPlug(self)
         self.dataPlug = self.data.setupPlug(self)
         self.poller = zmq.Poller()
@@ -74,20 +74,20 @@ class UartDeviceThread(threading.Thread):
             if self.active.is_set():
                 socks = dict(self.poller.poll(timeout = self.pollerTimeout))
                 if len(socks) == 0:
-                    self.logger.info('UartDeviceThread timeout')
+                    self.logger.info("UartDeviceThread timeout")
                 if self.terminated.is_set(): break
                 if self.plug in socks and socks[self.plug] == zmq.POLLIN:
                     msgType, msgVal = self.plug.recv_pyobj()
 
                     if msgType == UartDeviceComponent.Message.open:
-                        self.logger.info('UartDeviceThread - Opening %s on %s',
-                            self.component.uart_port_name, self.serial_port)
+                        self.logger.info("UartDeviceThread - Opening %s on %s" %
+                            (self.component.uart_port_name, self.serial_port))
                         self.openUart()
                         self.plug.send_pyobj((msgType,1))
 
                     elif msgType == UartDeviceComponent.Message.close:
-                        self.logger.info('UartDeviceThread - Closing %s on %s',
-                            self.component.uart_port_name, self.serial_port)
+                        self.logger.info("UartDeviceThread - Closing %s on %s" %
+                            (self.component.uart_port_name, self.serial_port))
                         self.closeUart()
                         self.plug.send_pyobj((msgType,1))
 
@@ -99,8 +99,8 @@ class UartDeviceThread(threading.Thread):
                             self.readUart()
 
                     elif msgType == UartDeviceComponent.Message.write:
-                        self.logger.info('UartDeviceThread - Writing on %s...',
-                            self.component.uart_port_name)
+                        self.logger.info("UartDeviceThread - Writing on %s..."" %
+                            (self.component.uart_port_name))
                         returnVal = self.writeUart(msgVal)
                         self.plug.send_pyobj((msgType,returnVal))
 
@@ -111,8 +111,8 @@ class UartDeviceThread(threading.Thread):
                         self.plug.send_pyobj((msgType,getOutWaiting()))
 
                     elif msgType == UartDeviceComponent.Message.send_break:
-                        self.logger.info('UartDeviceThread - Sending break on %s...',
-                            self.component.uart_port_name)
+                        self.logger.info("UartDeviceThread - Sending break on %s..." %
+                            (self.component.uart_port_name))
                         self.sendUartBreak()
                         self.plug.send_pyobj((msgType,1))
 
@@ -124,14 +124,14 @@ class UartDeviceThread(threading.Thread):
                         self.plug.send_pyobj((msgType,1))
 
                     else:
-                        self.logger.warning('UartDeviceThread - LOCAL MESSAGE ERROR'
-                            ' RECEIVED: %s',msgType)
+                        self.logger.warning("UartDeviceThread - LOCAL MESSAGE ERROR"
+                            " RECEIVED: %s" % msgType)
                         self.plug.send_pyobj((msgType,0))
 
                 elif self.readingActive == True:
                     self.readUart()
 
-        self.logger.info('GpioDeviceThread ended')
+        self.logger.info("GpioDeviceThread ended")
 
 
     def openUart(self):
@@ -143,7 +143,7 @@ class UartDeviceThread(threading.Thread):
     def readUart(self):
         if self.ser.is_open == True:
             self.readBuffer = self.readBuffer+self.ser.read(self.readSize)
-            self.logger.info('UartDeviceThread: Attempting to read...')
+            self.logger.info("UartDeviceThread: Attempting to read..."")
 
             # Limit buffer size to 16KB, more than the maximum number of bytes
             # one could expect to receive in 1s at 115200/8N1
@@ -153,7 +153,7 @@ class UartDeviceThread(threading.Thread):
                 # self.localZmqPublisher.send_string('localTopic')
                 self.pollerTimeout = 0
             else:
-                self.logger.info('UartDeviceThread: DONE READING')
+                self.logger.info("UartDeviceThread: DONE READING")
                 bytesOut = self.readBuffer[0:self.readSize]
                 self.readBuffer = self.readBuffer[self.readSize:]
                 self.readingActive = False
@@ -161,7 +161,7 @@ class UartDeviceThread(threading.Thread):
                 self.pollerTimeout = None
                 self.dataPlug.send_pyobj(('read',bytesOut))
         else:
-            self.logger.warning('UartDeviceThread - TRYING TO READ ON CLOSED PORT')
+            self.logger.warning("UartDeviceThread - TRYING TO READ ON CLOSED PORT")
 
     def writeUart(self, data):
         return self.ser.write(data)
@@ -185,33 +185,33 @@ class UartDeviceThread(threading.Thread):
         return self.uartAvailable
 
     def enableUart(self):
-        self.logger.info('UartDeviceThread setting up UART=%s:'
-            ' baudrate=%s [%d]', self.component.uart_port_name,
-            self.component.baud_rate, self.pid)
+        self.logger.info("UartDeviceThread setting up UART=%s:"
+            " baudrate=%s [%d]" % (self.component.uart_port_name,
+            self.component.baud_rate, self.pid))
         self.ser = serial.Serial(port = self.serial_port,
                                  baudrate = self.component.baud_rate,
                                  timeout = 1)
-        self.logger.info('UartDeviceThread %s setup and'
-            ' available for use', self.component.uart_port_name)
+        self.logger.info("UartDeviceThread %s setup and"
+            " available for use" % (self.component.uart_port_name))
         self.uartAvailable = True
 
     def disableUart(self):
         self.ser.close()
         self.uartAvailable = False
-        self.logger.info('UartDeviceThread: closed %s',
-            self.component.uart_port_name)
+        self.logger.info("UartDeviceThread: closed %s" %
+            (self.component.uart_port_name))
 
     def activate(self):
         self.active.set()
-        self.logger.info('UartDeviceThread activated')
+        self.logger.info("UartDeviceThread activated")
 
     def deactivate(self):
         self.active.clear()
-        self.logger.info('UartDeviceThread deactivated')
+        self.logger.info("UartDeviceThread deactivated")
 
     def terminate(self):
         self.terminated.set()
-        self.logger.info('UartDeviceThread terminating')
+        self.logger.info("UartDeviceThread terminating")
 # riaps:keep_import:end
 
 
@@ -232,8 +232,8 @@ class UartDeviceComponent(Component):
         self.uart_port_name = uart_port_name
         self.baud_rate = baud_rate
 
-        self.logger.info("UartDeviceComponent @%s: baudrate=%s [%d]",
-                        self.uart_port_name, self.baud_rate, self.pid)
+        self.logger.info("UartDeviceComponent @%s: baudrate=%s [%d]" %
+                        (self.uart_port_name, self.baud_rate, self.pid))
         self.UartDeviceThread = None
 # riaps:keep_constr:end
 
@@ -261,7 +261,7 @@ class UartDeviceComponent(Component):
 # riaps:keep_clock:begin
     def on_clock(self):
         now = self.clock.recv_pyobj()   # Receive time (as float)
-        self.logger.info("on_clock()[%s]: %s",str(self.pid),now)
+        self.logger.info("on_clock()[%s]: %s" % (str(self.pid),now))
 
         if self.UartDeviceThread == None:
             self.UartDeviceThread = UartDeviceThread(self,self.command,self.data)
@@ -275,7 +275,7 @@ class UartDeviceComponent(Component):
     def on_data(self):
         msg = self.data.recv_pyobj()
         self.uartReadPub.send_pyobj(msg)
-        self.logger.info('UartDeviceComponent: Publishing Data')
+        self.logger.info("UartDeviceComponent: Publishing Data")
 
     def on_command(self):
         msg = self.command.recv_pyobj()
@@ -286,13 +286,13 @@ class UartDeviceComponent(Component):
     def on_uartRepPort(self):
         msg = self.uartRepPort.recv_pyobj()
         if self.UartDeviceThread == None:
-            self.logger.info("on_uartRepPort()[%s]: UartDeviceThread not available yet",str(self.pid))
+            self.logger.info("on_uartRepPort()[%s]: UartDeviceThread not available yet" % str(self.pid))
             msg = ('ERROR',-1)
             self.uartRepPort.send_pyobj(msg)
         else:
             if self.UartDeviceThread.isUartAvailable() == True:
                 msgType, msgVal = msg
-                self.logger.info("on_uartRepPort()[%s]: %s",str(self.pid),repr(msg))
+                self.logger.info("on_uartRepPort()[%s]: %s" % (str(self.pid),repr(msg)))
 
                 if msgType == 'open':
                     self.command.send_pyobj((UartDeviceComponent.Message.open,0))
@@ -322,7 +322,7 @@ class UartDeviceComponent(Component):
                     self.command.send_pyobj((UartDeviceComponent.Message.set_break_condition,msgVal))
 
             else:
-                self.logger.info("on_uartRepPort()[%s]: UART not available yet",str(self.pid))
+                self.logger.info("on_uartRepPort()[%s]: UART not available yet" % str(self.pid))
                 msg = ('ERROR',-1)
                 self.uartRepPort.send_pyobj(msg)
 # riaps:keep_uartrepport:end

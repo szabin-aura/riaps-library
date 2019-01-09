@@ -11,21 +11,22 @@ BATCH_SIZE = 60
 
 class DataLogger(Component):
     def __init__(self,db_host,db_port,db_name,db_user,db_password):
-        super(DataLogger, self).__init__()	        
+        super(DataLogger, self).__init__()
         self.pid = os.getpid()
-        self.logger.info("(PID %s) - starting DataLogger",str(self.pid))
+        self.logger.info("(PID %s) - starting DataLogger" % str(self.pid))
         self.point_values = []
         self.client = InfluxDBClient(host=db_host, port=db_port,
-            database=db_name, username=db_user, password=db_password)        
+            database=db_name, username=db_user, password=db_password)
 
     def on_rx_modbusData(self):
         msg = self.rx_modbusData.recv_pyobj()
-        self.logger.info("PID (%s) - on_rx_modbusData():%s",str(self.pid),str(msg))
+        self.logger.info("PID (%s) - on_rx_modbusData():%s" % (str(self.pid),str(msg)))
         # MM TODO:  update based on what is being logged and how we want to use it
-        '''    
+        '''
         timestamp = int(1e9 * data['timestamp'])
         # alternative:
-        # timestamp = datetime.utcfromtimestamp(data['timestamp'])  
+        # timestamp = datetime.utcfromtimestamp(data['timestamp'])
+
         self.point_values.append({
             "time": timestamp,
             "measurement": "pmu",
@@ -43,6 +44,6 @@ class DataLogger(Component):
         if len(self.point_values) >= BATCH_SIZE:
             self.client.write_points(self.point_values)
             self.point_values = []
-    
-    def __destroy__(self):			
-        self.logger.info("(PID %s) - stopping DataLogger",str(self.pid))   	        	        
+
+    def __destroy__(self):
+        self.logger.info("(PID %s) - stopping DataLogger" % str(self.pid))

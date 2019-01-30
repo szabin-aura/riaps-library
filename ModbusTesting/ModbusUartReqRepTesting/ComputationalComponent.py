@@ -40,12 +40,6 @@ class ComputationalComponent(Component):
 
         self.message_sent = False
 
-        if debugMode:
-            self.logger.setLevel(logging.DEBUG)
-            self.logger.handlers[0].setLevel(logging.DEBUG) # a workaround for hardcoded INFO level of StreamHandler logger
-        else:
-            self.logger.setLevel(logging.INFO)
-
         '''Setup Commands'''
         self.defaultNumOfRegs = 1
         self.dummyValue = [0]

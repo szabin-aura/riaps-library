@@ -21,22 +21,16 @@ InputRegs = namedtuple('InputRegs', ['outputCurrent','outputVolt','voltPhase','t
 HoldingRegs = namedtuple('HoldingRegs',['unused', 'startStopCmd', 'power'])
 '''For RIAPS future
 1.start/stop, 2.power command, 3. frequency shift from secondary control, 4. voltage magnitude shift from secondary control.
-HoldingRegs = namedtuple('HoldingRegs',['startStopCmd', 'powerCmd', 'freqShift', 'voltMagShift']) 
+HoldingRegs = namedtuple('HoldingRegs',['startStopCmd', 'powerCmd', 'freqShift', 'voltMagShift'])
 '''
 
 class ComputationalComponent(Component):
     def __init__(self):
-        super(ComputationalComponent, self).__init__()	        
+        super(ComputationalComponent, self).__init__()
         self.pid = os.getpid()
         self.logger.info("(PID %s) - starting ComputationalComponent" % str(self.pid))
         self.inputRegs = InputRegs(RegSet(0,45),RegSet(1,56),RegSet(2,78),RegSet(3,91))
         self.holdingRegs = HoldingRegs(RegSet(0,0),RegSet(1,55),RegSet(2,66))
-
-        if debugMode:
-            self.logger.setLevel(logging.DEBUG)
-            self.logger.handlers[0].setLevel(logging.DEBUG) # a workaround for hardcoded INFO level of StreamHandler logger
-        else:
-            self.logger.setLevel(logging.INFO)
 
         '''Setup Commands'''
         self.defaultNumOfRegs = 1

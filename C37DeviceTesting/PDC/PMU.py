@@ -59,7 +59,6 @@ class PMU(Component):
 # riaps:keep_constr:begin
     def __init__(self, pmu_ip, pmu_port):
         super().__init__()
-        self.logger.setLevel(logging.DEBUG)
         self.pid = os.getpid()
         self.pmu_ip = pmu_ip
         self.pmu_port = pmu_port

@@ -38,12 +38,6 @@ CommandFormat = namedtuple('CommandFormat', ['commandType','registerAddress','nu
 class ModbusUartReqRepDevice(Component):
     def __init__(self,slaveaddress=0,port="UART2",baudrate=19200,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,serialTimeout=0.05): # defaults for Modbus spec
         super().__init__()
-        if debugMode:
-            self.logger.setLevel(logging.DEBUG)
-            self.logger.handlers[0].setLevel(logging.DEBUG) # a workaround for hardcoded INFO level of StreamHandler logger
-        else:
-            self.logger.setLevel(logging.INFO)
-
         self.pid = os.getpid()
 
         if port == 'UART1':

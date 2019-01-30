@@ -146,7 +146,6 @@ class GpioDevice(Component):
         #super(GpioDevice, self).__init__()
         self.pid = os.getpid()
         self.logger.info("(PID %s) - starting GpioDevice" % str(self.pid))
-        self.logger.setLevel(logging.DEBUG)
         self.pid = os.getpid()
         self.bbb_pin_name = bbb_pin_name
         self.direction = direction

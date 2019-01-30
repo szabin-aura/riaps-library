@@ -33,12 +33,6 @@ class ComputationalComponent(Component):
         self.inputRegs = InputRegs(RegSet(0,45),RegSet(1,56),RegSet(2,78),RegSet(3,91))
         self.holdingRegs = HoldingRegs(RegSet(0,0),RegSet(1,55),RegSet(2,66))
 
-        if debugMode:
-            self.logger.setLevel(logging.DEBUG)
-            self.logger.handlers[0].setLevel(logging.DEBUG) # a workaround for hardcoded INFO level of StreamHandler logger
-        else:
-            self.logger.setLevel(logging.INFO)
-
         '''Setup Commands'''
         self.defaultNumOfRegs = 1
         self.dummyValue = [0]

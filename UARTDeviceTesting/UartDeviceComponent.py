@@ -227,7 +227,6 @@ class UartDeviceComponent(Component):
 # riaps:keep_constr:begin
     def __init__(self, uart_port_name='UART2', baud_rate=9600):
         super().__init__()
-        self.logger.setLevel(logging.DEBUG)
         self.pid = os.getpid()
         self.uart_port_name = uart_port_name
         self.baud_rate = baud_rate

@@ -22,9 +22,10 @@ The C++ Components in this project are:
 
 ### Install libmodbus
 
-    This library should be installed on the machine where the library will be built and on the BBBs where the library will be call from the RIAPS Modbus UART shared library.
+This library should be installed on the machine where the library will be built and on the BBBs where the 
+library will be call from the RIAPS Modbus UART shared library.
 
-    - To build on the BBBs:
+- To build on the BBBs:
 
     ```
     git clone https://github.com/cmjones01/libmodbus.git
@@ -49,8 +50,8 @@ The C++ Components in this project are:
     `----------------------------------------------------------------
     ```
 
-    - To cross-compile on the development machine, libmodbus needs to be cross compiled on the VM.  The above method applies,
-    but use the following configuration statement.
+- To cross-compile on the development machine, libmodbus needs to be cross compiled on the VM.  
+    The above method applies, but use the following configuration statement.
 
     ```
     ac_cv_func_malloc_0_nonnull=yes ./configure --host=arm-linux-gnueabihf --prefix=/opt/riaps/armhf

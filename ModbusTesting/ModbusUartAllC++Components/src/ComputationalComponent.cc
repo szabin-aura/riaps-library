@@ -20,13 +20,10 @@ namespace riapsmodbuscreqrepuart {
                       const std::string& actor_name       )
             : ComputationalComponentBase(parent_actor, actor_spec, type_spec, name, type_name, args, application_name, actor_name) {
             PID_ = getpid();
-            debug_mode_ = true;
 
-            if (debug_mode_) {
-                component_logger()->set_level(spdlog::level::level_enum::debug);
-            } else {
-                component_logger()->set_level(spdlog::level::level_enum::info);
-            }
+            debug_mode_ = false;
+            if (debug_mode_)
+                set_debug_level(spdlog::level::debug);
 
             // Setup Modbus Data Registers
             nb_holding_regs_ = 3;
@@ -60,17 +57,55 @@ namespace riapsmodbuscreqrepuart {
 
         void ComputationalComponent::OnModbusreqport() {
             // riaps:keep_onmodbusreqport:begin
-            auto [msg, err] = RecvModbusreqport();
+            auto [msg_request, request_err] = RecvModbusreqport();
             // Receive Response
             component_logger()->debug("Begin on_modbusReqPort()");
 
-            open_req_ = false;
+            if (!request_err) {
+                open_req_ = false;
 
-            if (debug_mode_) {
-                clock_gettime(CLOCK_MONOTONIC, &postobservations_);
-                system_time_sub(&postobservations_, &preobservations_, &result_);
-                component_logger()->debug("Command to data: tv.sec={} tv_nsec={}", result_.tv_sec,
-                               ((double) result_.tv_nsec) / NSEC_PER_SEC);
+                if (debug_mode_) {
+                    clock_gettime(CLOCK_MONOTONIC, &postobservations_);
+                    system_time_sub(&postobservations_, &preobservations_, &result_);
+                    component_logger()->debug("Command to data: tv.sec={} tv_nsec={}", result_.tv_sec,
+                                   ((double) result_.tv_nsec) / NSEC_PER_SEC);
+                }
+
+                // MM TODO:  Rework output message to match what is really happening
+                int16_t reg_address = msg_request->getRegisterAddress();
+                int16_t num_regs = msg_request->getNumberOfRegs();
+                std::string value_msg;
+
+                for (int i = 0; i < num_regs; i++) {
+                    value_msg.append(std::to_string(msg_request->getValues()[i]) + " ");
+                }
+
+                MessageBuilder<messages::LogData> log_builder;
+                if (msg_request->getCommandType() == riapsmodbuscreqrepuart::messages::ModbusCommands::READ_COIL_BITS) {
+                    log_builder->setMsg(fmt::format("Received {} Coil Bits at {}: values are {}", num_regs, reg_address, value_msg));
+                } else if (msg_request->getCommandType() == riapsmodbuscreqrepuart::messages::ModbusCommands::READ_INPUT_BITS) {
+                    log_builder->setMsg(fmt::format("Received {} Input Bits at {}: values are {}", num_regs, reg_address, value_msg));
+                } else if (msg_request->getCommandType() == riapsmodbuscreqrepuart::messages::ModbusCommands::READ_INPUT_REGS) {
+                    log_builder->setMsg(fmt::format("Received {} Input Registers at {}: values are {}", num_regs, reg_address, value_msg));
+                } else if (msg_request->getCommandType() == riapsmodbuscreqrepuart::messages::ModbusCommands::READ_HOLDING_REGS) {
+                    log_builder->setMsg(fmt::format("Received {} Holding Registers at {}: values are {}", num_regs, reg_address, value_msg));
+                } else if ((msg_request->getCommandType() == riapsmodbuscreqrepuart::messages::ModbusCommands::WRITE_COIL_BIT) || (msg_request->getCommandType() == riapsmodbuscreqrepuart::messages::ModbusCommands::WRITE_COIL_BITS)) {
+                    log_builder->setMsg(fmt::format("Wrote {} Coil Bits {}: values are {}", num_regs, reg_address, value_msg));
+                } else if ((msg_request->getCommandType() == riapsmodbuscreqrepuart::messages::ModbusCommands::WRITE_HOLDING_REG) || (msg_request->getCommandType() == riapsmodbuscreqrepuart::messages::ModbusCommands::WRITE_MULTI_HOLDING_REGS)) {
+                    log_builder->setMsg(fmt::format("Wrote {} Holding Registers {}: values are {}", num_regs, reg_address, value_msg));
+                } else if (msg_request->getCommandType() == riapsmodbuscreqrepuart::messages::ModbusCommands::WRITE_READ_HOLDING_REGS) {
+                    log_builder->setMsg(fmt::format("Wrote and Read {} Holding Registers {}: values are {}", num_regs, reg_address, value_msg));
+                }
+
+                auto logdata_error = SendTx_modbusdata(log_builder);
+                if (!logdata_error) {
+                    component_logger()->info("Log Message Sent");
+                } else {
+                    component_logger()->warn("Error sending Log Message: {}, errorcode: {}", __func__, logdata_error.error_code());
+                }
+            }
+            else {
+                component_logger()->warn("Recv() error in {}, errorcode: {}", __func__, request_err.error_code());
             }
 
             component_logger()->debug("End on_modbusReqPort()");
@@ -80,27 +115,30 @@ namespace riapsmodbuscreqrepuart {
         void ComputationalComponent::OnClock() {
             // riaps:keep_onclock:begin
             auto msg = RecvClock();
-            component_logger()->debug("{}: ComputationalComponent::OnClock(): port={}", PID_, port->GetPortName());
+            component_logger()->debug("{}: ComputationalComponent::OnClock():", PID_);
 
-            if (!openReq) {
+            if (!open_req_) {
                 clock_gettime(CLOCK_MONOTONIC, &preobservations_);
-                capnp::MallocMessageBuilder messageRepBuilder;
-                auto msgModbusCommand = messageRepBuilder.initRoot<modbusuart::messages::CommandFormat>();
-                msgModbusCommand.setCommandType(modbusuart::messages::ModbusCommands::READ_HOLDING_REGS);
-                msgModbusCommand.setRegisterAddress(0);
-                msgModbusCommand.setNumberOfRegs(
-                        nb_holdingRegs);  // for writes, this value is 1 if successful, -1 if failed
 
-                auto values = msgModbusCommand.initValues(nb_holding_regs_);
+                MessageBuilder<messages::CommandFormat> command_builder;
+                command_builder->setCommandType(riapsmodbuscreqrepuart::messages::ModbusCommands::READ_HOLDING_REGS);
+                command_builder->setRegisterAddress(0);
+                command_builder->setNumberOfRegs(nb_holding_regs_);  // for writes, this value is 1 if successful, -1 if failed
 
-                for (int i = 0; i <= nb_holding_regs_; i++) {
+                auto values = command_builder->initValues(nb_holding_regs_);
+
+                for (int i = 0; i < nb_holding_regs_; i++) {
                     values.set(i, (uint16_t) holding_regs_.get()[i]);
                 }
 
                 // Send command back to modbus device component
-                component_logger()->warn_if(!SendModbusReqPort(messageRepBuilder, msgModbusCommand),
-                                 "{}: Couldn't send command message", PID_);
-                open_req_ = true;
+                auto command_error = SendModbusreqport(command_builder);
+                if (!command_error) {
+                    open_req_ = true;
+                } else {
+                    component_logger()->warn("Error sending command message: {}, errorcode: {}", PID_, command_error.error_code());
+                }
+
             } else {
                 component_logger()->debug("There is an open request, did not send a new request this clock cycle");
             }

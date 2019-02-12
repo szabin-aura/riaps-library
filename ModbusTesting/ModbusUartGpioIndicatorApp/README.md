@@ -1,3 +1,5 @@
+***Note:  THIS PROJECT NEEDS UPDATING TO THE LATEST METHODS USING PYBIND***
+
 # RIAPS Application Description
 This application example shows how to create components using Python and interface with a C++
 shared library device (libmodbusuart.so that is available in the ModbusUartCDevice directory).
@@ -13,10 +15,11 @@ The Python Components in this project are:
 * ComputationalComponent.py - request data from the Modbus UART device component.
 * DataLogger.py - publishes log data created by the ComputationalComponent. The commented out code show an example of interfacing with InfluxDB to gather graphing data.
 * VisualLogger.py - commands the GPIO to blink when a Modbus command response is received.
+* GpioDevice.py - blinks the GPIO.
 
-This project is dependent on the ModbusUartCDevice and GpioPyDevice projects and should be linked in the project properties under **Project References**
-
-> ***Note:  THIS PROJECT NEEDS UPDATING TO THE LATEST METHODS USING PYBIND***
+The C++ Component in this project is:
+* ModbusUART (.h/.cpp) - this is the modbus device component.  This device receives requests for Modbus communication,
+performs the communication, and then provides the response back to the requestor. 
 
 ## Developer
 * Mary Metelko, Vanderbilt University
@@ -123,34 +126,6 @@ Then go to [Flasher - eMMC: All BeagleBone Varients with eMMC section of the Ubu
 * Modbus Message Parser
   - http://modbus.rapidscada.net/
 
-## Debugging Hints
-* If serial port is busy, make sure to stop the gpsd service using the following command
-```
-	$ sudo systemctl stop gpsd
-```
-
 ## GPIO LED
-The USR3 is used to indicate the Modbus command response is received.  This is one of the 4 LEDs on the BBB board.  
+The USR2 is used to indicate the Modbus command response is received.  This is one of the 4 LEDs on the BBB board.  
 USR0 is used by the OS to indicate network activity, so avoid this one.
-
-## Deployment Package
-Once the application is ready to deploy, the following files are expected to be available.
-
-***User Edited Files:***
-* modbus.riaps
-* modbus.depl
-* ComputationalComponent.py
-* DataLogger.py
-
-***RIAPS Library File:***
-* libmodbusuart.so (the library device component)
-* GpioDevice.py
-
-***Development Tool Generated Files:***
-* ModbusCommands.capnp
-* ResponseFormat.capnp
-* CommandFormat.capnp
-* LogData.capnp
-* GPIOCommands.capnp
-* GPIOLoggedModbusAction.json (renamed from _app)
-* GPIOLoggedModbusAction_depl.json

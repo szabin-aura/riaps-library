@@ -5,8 +5,8 @@
 extern "C"
 {
 #endif
-#ifndef TIMETEST_TIME_MACROS_H_H
-#define TIMETEST_TIME_MACROS_H_H
+#ifndef TIME_MACROS_H
+#define TIME_MACROS_H
 #include <time.h>
 #include <errno.h>
 typedef struct timespec system_timespec;
@@ -75,7 +75,7 @@ inline int ts_compare(const system_timespec *t1,
  *      0 <= tv_nsec < NSEC_PER_SEC
  * For negative values only the tv_sec field is negative !
  * @retval EINVAL Either ts is NULL
- * @retval EOVERFLOW sec and nsec are too large and cannot be returned as system_timespec 
+ * @retval EOVERFLOW sec and nsec are too large and cannot be returned as system_timespec
  */
 inline int set_normalized_system_timespec(system_timespec *ts,
                                           time_t sec, long nsec) {
@@ -102,7 +102,7 @@ inline int set_normalized_system_timespec(system_timespec *ts,
 * @param [out] ns pointer to the converted nanosecond value
 * @retval EINVAL Either t1 or ns is NULL
 * @retval 0 conversion successful
-* @retval EOVERFLOW ts is too large and cannot be returned as ns 
+* @retval EOVERFLOW ts is too large and cannot be returned as ns
 * @retval EINVAL ts is not a valid system time
 */
 inline int system_timespec_to_time_ns(const system_timespec *t1,
@@ -123,7 +123,7 @@ inline int system_timespec_to_time_ns(const system_timespec *t1,
 * @param [out] t1 pointer to the converted F6 system time value
 * @retval EINVAL Either t1 or ns is NULL
 * @retval 0 conversion successful
-* @retval EOVERFLOW ts is too large and cannot be returned as system_timespec 
+* @retval EOVERFLOW ts is too large and cannot be returned as system_timespec
 * @retval EINVAL ts is not a valid system time
 */
 inline int time_ns_to_system_time(const time_ns_t *ns,
@@ -148,7 +148,7 @@ inline int time_ns_to_system_time(const time_ns_t *ns,
 * @param [out] Z pointer to the the result
 * @retval EINVAL Either X or Y or Z is NULL
 * @retval 0 conversion successful
-* @retval EOVERFLOW ts is too large and cannot be returned as system_timespec 
+* @retval EOVERFLOW ts is too large and cannot be returned as system_timespec
 * @retval EINVAL ts is not a valid system time
 */
 inline int system_time_add(const system_timespec *X,
@@ -179,7 +179,7 @@ inline int system_time_add(const system_timespec *X,
 * @param [out] Z pointer to the the result
 * @retval EINVAL Either X or Y or Z is NULL
 * @retval 0 conversion successful
-* @retval EOVERFLOW ts is too large and cannot be returned as system_timespec 
+* @retval EOVERFLOW ts is too large and cannot be returned as system_timespec
 * @retval EINVAL ts is not a valid system time
 */
 inline int system_time_sub(const system_timespec *X,
@@ -205,4 +205,4 @@ inline int system_time_sub(const system_timespec *X,
 #endif
 
 
-#endif //TIMETEST_TIME_MACROS_H_H
+#endif //TIME_MACROS_H

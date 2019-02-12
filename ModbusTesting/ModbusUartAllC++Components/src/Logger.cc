@@ -26,6 +26,12 @@ namespace riapsmodbuscreqrepuart {
         void Logger::OnRx_modbusdata() {
             // riaps:keep_onrx_modbusdata:begin
             auto [msg, err] = RecvRx_modbusdata();
+
+            if (!err)
+                component_logger()->info("{}: [{}]", msg->getMsg().cStr(), ::getpid());
+            else
+                component_logger()->warn("Recv() error in {}, errorcode: {}", __func__, err.error_code());
+
             // riaps:keep_onrx_modbusdata:end
         }
 

@@ -87,6 +87,6 @@ add_library(modbusuart SHARED
         include/ModbusUART.h
         include/messages/riapsmodbuscreqrepuart.capnp.c++
         )
-target_link_libraries(modbusuart PRIVATE czmq riaps dl capnp kj)
+target_link_libraries(modbusuart PRIVATE czmq riaps dl capnp kj modbus)
 set_target_properties(modbusuart PROPERTIES PREFIX lib SUFFIX .so)
 # riaps:keep_modbusuart:end

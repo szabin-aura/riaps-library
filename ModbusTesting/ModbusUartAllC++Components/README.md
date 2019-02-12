@@ -1,19 +1,22 @@
 # RIAPS Application Description
 
-> ***Note:  THIS PROJECT IS CURRENTLY NOT UPDATED TO THE LATEST VERSION USING PYBIND***
-
 This application example shows how to create components using C++ and interface with a C++
-shared library device (libmodbusuart.so that is available in the ModbusUartCDevice directory).  
+device component (libmodbusuart.so).  
 
 To begin, the user defines the model (.riaps) and deployment files (.depl). This will generate
 a shell for the user edited C++ component files.
 
 The C++ Components in this project are:
-* ComputationalComponent (.h/.cc) - this is the application code that send and reads data to the Modbus Uart device component.
-  The application developer is expected to place the computational logic in this code.
-* ComputationalComponentBase (.h/.cc) - these files are auto generated based on the model file input.
-  The application developer should not edit these files.  Any changes to the model file will
-  override any edits to these files.
+* ComputationalComponent (.h/.cc) - this is the application code that send and reads data to the Modbus Uart device component.  The application developer is expected to place the computational logic in this code.
+  - ComputationalComponentBase (.h/.cc) - these files are auto generated based on the model file input.
+    The application developer should not edit these files.  Any changes to the model file will
+    override any edits to these files.
+
+* ModbusUART (.h/.cc) - this is the modbus device component.  This device receives requests for Modbus communication,
+performs the communication, and then provides the response back to the requestor.  
+
+* Logger (.h/cc) - this component subscribes to the results of the Modbus communication which is published by the
+ComputationalComponent.
 
 ## Developer
 * Mary Metelko, Vanderbilt University
@@ -22,7 +25,7 @@ The C++ Components in this project are:
 
 ### Install libmodbus
 
-This library should be installed on the machine where the library will be built and on the BBBs where the 
+This library should be installed on the machine where the library will be built and on the BBBs where the
 library will be call from the RIAPS Modbus UART shared library.
 
 - To build on the BBBs:
@@ -54,21 +57,8 @@ library will be call from the RIAPS Modbus UART shared library.
     The above method applies, but use the following configuration statement.
 
     ```
-    ac_cv_func_malloc_0_nonnull=yes ./configure --host=arm-linux-gnueabihf --prefix=/opt/riaps/armhf
+    ac_cv_func_malloc_0_nonnull=yes ./configure --host=arm-linux-gnueabihf
     ```
-
-    which setups the following:
-
-    ```
-    libmodbus 3.1.2
-        ===============
-        prefix:                 /opt/riaps/armhf
-        sysconfdir:             ${prefix}/etc
-        libdir:                 ${exec_prefix}/lib
-        includedir:             ${prefix}/include
-
-    ```
-
 
 > Note: cmjones01 fork was used to allow option for asynchronous operation in the future
 - See https://martin-jones.com/2015/12/16/modifying-libmodbus-for-asynchronous-operation/
@@ -93,7 +83,12 @@ sudo pip3 install influxdb
 
 ### Eclipse Project Properties Additions
 
-Include the **/usr/local/include/modbus** in the project properties include paths (C/C++ General --> Path and Symbols) 
+* Include **/usr/local/include/modbus** in the project properties include paths (C/C++ General --> Path and Symbols)
+* In the CMakeLists.txt file, add "modbus" in the target link libraries for the libmodbusuart.so.
+
+```
+target_link_libraries(modbusuart PRIVATE czmq riaps dl capnp kj modbus)
+```
 
 ## UART Configuration
 * port = 'UART2'
@@ -183,24 +178,35 @@ Then go to [Flasher - eMMC: All BeagleBone Varients with eMMC section of the Ubu
 * Modbus Message Parser
   - http://modbus.rapidscada.net/
 
-## Debugging Hints
-* If serial port is busy, make sure to stop the gpsd service using the following command
-```
-sudo systemctl stop gpsd
-```
+## Device Interface Available to Application Components
 
-## Deployment Package
-Once the application is ready to deploy, the following files are expected to be available.
+* Cap'n Proto Messages:  defined in 'messages/riapsModbusUART/modbusuart.capnp'
+    - ***CommandFormat***
+        - **commandType** (UInt16): ModbusCommands enum value for desired command
+        - **registerAddress** (UInt16): address of the remote device
+        >  Note: for writeReadHoldingRegs, this is the holding address to write
+        - **numberOfRegs** (UInt16): number of bits or registers
+        - **values** (List(UInt16)): values to write
+        - **wreadRegAddress** (UInt16): used for writeReadHoldingRegs to specify the holding address to read
+        - **wreadNumOfRegs** (UInt16): used for writeReadHoldingRegs to specify the number of registers to read
+    - ***ResponseFormat***
+        - **commandType** (UInt16): ModbusCommands enum value for command used
+        - **registerAddress** (UInt16): address of the remote device
+        - **numberOfRegs** (UInt16): number of registers read or written
+        - **values** (List(UInt16)): values read (not used in writes)
+    - ***ModbusCommands*** is an enum describing the types of Modbus Commands that are available to the user in the capnp file, the values are defined as follows:
+        - **readCoilBits / writeCoilBit / writeCoilBits**: Used to read and write the Coil bits.  The number of coil bits is set when configuring the Modbus in the RIAPS model file by using "numcoilbits=xxxx", where xxxx is a value between 1 to 2000.
+        > Note:  This functionality has not yet been tested        
+        - **readInputBits**: Used to read the discrete input bits.  The number of discrete input bits is set when configuring the Modbus in the RIAPS model file by using  "numdiscretebits=xxxx", where xxxx is a value between 1 to 2000.
+        > Note:  This functionality has not yet been tested
+        - **readInputRegs**: Used to read the input registers.  The number of input registers is set when configuring the Modbus in the RIAPS model file by using "numinputreg=xxx", where xxx is a value between 1 to 125.
+        - **readHoldingRegs / writeHoldingReg / writeMultiHoldingRegs / writeReadHoldingRegs**: Used to read/write the holding registers.  The number of holding registers is set when configuring the Modbus in the RIAPS model file by using "numholdreg=xxx", where xxx is a value between 1 to 125.
 
-***User Edited Files:***
-* modbus.riaps
-* modbus.depl
-* libcomputationalcomponent.so
 
-***RIAPS Library File:***
-* libmodbusuart.so (the library device component)
+* Usage of Cap'n Proto Message Enums
+    - The Cap'n Proto syntax requires that the enum name be camelback with a lowercase first letter.  The translation into the C++ sets each of these names to all uppercase words with '_' between camelback parts of the Cap'n Proto message defined name.
+      - C++ Components example
 
-***Development Tool Generated Files:***
-* modbusuart.capnp
-* LogData.capnp
-* RIAPSModbusCReqRepUART.json
+      ```
+      riapsmodbuscreqrepuart::messages::ModbusCommands::READ_HOLDING_REGS
+      ```

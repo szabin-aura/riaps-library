@@ -1,16 +1,7 @@
-@0x8cdee644dfe6421f;
+@0xaf97e03d7a1334cf;
 
 using Cxx = import "/capnp/c++.capnp";
 $Cxx.namespace("riapsmodbuscreqrepuart::messages");
-
-# riaps:keep_responseformat:begin
-struct ResponseFormat {
-    commandType @0: ModbusCommands;
-    registerAddress @1: UInt16;
-    numberOfRegs @2: UInt16;
-    values @3: List(UInt16);
-}
-# riaps:keep_responseformat:end
 
 # riaps:keep_logdata:begin
 struct LogData {
@@ -41,3 +32,12 @@ struct CommandFormat {
     wreadNumOfRegs @5: UInt16;
 }
 # riaps:keep_commandformat:end
+
+# riaps:keep_responseformat:begin
+struct ResponseFormat {
+    commandType @0: ModbusCommands;
+    registerAddress @1: UInt16;
+    numberOfRegs @2: UInt16;
+    values @3: List(UInt16);
+}
+# riaps:keep_responseformat:end

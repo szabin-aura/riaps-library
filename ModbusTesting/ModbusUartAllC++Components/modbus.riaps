@@ -10,12 +10,12 @@ app RIAPSModbusCReqRepUART {
     //     considered the server for the request/response interaction
     device ModbusUART (slaveaddress=10, port='UART2', baudrate=115200, numholdreg=3, numinputreg=4) in C++ {
         rep modbusRepPort : (CommandFormat,ResponseFormat);
-        timer clock 10;
+        timer clock 1000;
     }
 
     // Example Component to show Modbus I/F usage
     component ComputationalComponent() in C++ {
-      timer clock 40;
+      timer clock 4000;
       pub tx_modbusData : LogData;                        // When data is ready,
       req modbusReqPort : (CommandFormat,ResponseFormat); // Port used to communicate with the ModbusUartDevice
     }

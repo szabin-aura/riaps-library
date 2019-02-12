@@ -27,20 +27,20 @@ namespace riapsmodbuscreqrepuart {
             virtual ~ComputationalComponent();
 
             // riaps:keep_decl:begin
-        	private:
-              pid_t PID_;
-              bool debug_mode_;
-              bool open_req_;
-              int nb_holding_regs_;
-              int nb_input_regs_;
-              std::unique_ptr<uint16_t[]> holding_regs_;
-              std::unique_ptr<uint16_t[]> input_regs_;
+    	private:
+            pid_t PID_;
+            bool debug_mode_;
+            bool open_req_;
+            int nb_holding_regs_;
+            int nb_input_regs_;
+            std::unique_ptr<uint16_t[]> holding_regs_;
+            std::unique_ptr<uint16_t[]> input_regs_;
 
-              // time testing
-              struct timespec resolution_ = {0,0};
-              struct timespec preobservations_ = {0,0};
-              struct timespec postobservations_ = {0,0};
-              system_timespec result_;
+            // time testing
+            struct timespec resolution_ = {0,0};
+            struct timespec preobservations_ = {0,0};
+            struct timespec postobservations_ = {0,0};
+            system_timespec result_;
             // riaps:keep_decl:end
         };
     }

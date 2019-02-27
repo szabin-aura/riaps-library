@@ -141,7 +141,8 @@ class ModbusUartReqRepDevice(Component):
             ##self.unpackCommand(commandRequest)
             responseValue = -1  # invalid response
             ##if self.modbus.isModbusAvailable() == True:
-            if self.modbus.isModbusAvailable() == False:
+            passVar = True
+            if passVar:
                 self.logger.info("Sending command to Modbus interface")
                 ##responseValue = self.sendModbusCommand()
                 #if debugMode:

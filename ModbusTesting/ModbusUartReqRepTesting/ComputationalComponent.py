@@ -114,9 +114,9 @@ class ComputationalComponent(Component):
                         self.ModbusPending += 1
                         self.logger.debug("Modbus command sent")
                 except PortError as e:
-                    self.logger.info("on_clock-modbusCommand:send exception = %d" % e.errno)
+                    self.logger.info("on_clock-modbusCommandReqPort:send exception = %d" % e.errno)
                     if e.errno in (PortError.EAGAIN,PortError.EPROTO):
-                        self.logger.info("on_clock-modbusCommand: port error received")
+                        self.logger.info("on_clock-modbusCommandReqPort: port error received")
 
 
     def on_modbusCommandReqPort(self):
@@ -124,16 +124,17 @@ class ComputationalComponent(Component):
         try:
             msg = self.modbusCommandReqPort.recv_pyobj()
             self.ModbusPending -= 1
+            self.logger.debug("Modbus command response received")
         except PortError as e:
-            self.logger.info("on_modbusReqPort:send exception = %d" % e.errno)
+            self.logger.info("on_modbusCommandReqPort:receive exception = %d" % e.errno)
             if e.errno in (PortError.EAGAIN,PortError.EPROTO):
-                self.logger.info("on_modbusReqPort: port error received")
+                self.logger.info("on_modbusCommandReqPort: port error received")
 
 #       pydevd.settrace(host='192.168.1.102',port=5678)
 
         if debugMode:
             self.cmdResultsRxTime = time.perf_counter()
-            self.logger.debug("on_modbusReqPort()[%s]: Received Modbus data=%s from ModbusUartDevice at %f, time from cmd to data is %f ms" % (str(self.pid),repr(msg),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000))
+            self.logger.debug("on_modbusCommandReqPort()[%s]: Received Modbus data=%s from ModbusUartDevice at %f, time from cmd to data is %f ms" % (str(self.pid),repr(msg),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000))
 
         if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
             logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)

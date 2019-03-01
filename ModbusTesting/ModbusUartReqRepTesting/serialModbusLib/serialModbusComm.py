@@ -10,6 +10,8 @@ At this time, it does not read/write coils.
 import minimalmodbus
 import serial
 from collections import namedtuple
+import spdlog
+from spdlog import ConsoleLogger, LogLevel
 from enum import Enum, unique
 #import pydevd
 
@@ -34,17 +36,17 @@ class FunctionCodes(Enum):
 class SerialModbusComm(object):
     '''
     This library will interface with minimalmodbus with communications over a serial interface.
-
-    Note:  The
     '''
 
-    def __init__(self,component,slaveAddressDecimal,portConfig):
+    def __init__(self,slaveAddressDecimal,portConfig):
         '''
         Constructor
         '''
         self.port_config = portConfig
         self.slaveAddress = slaveAddressDecimal
         self.portOpen = False
+        self.logger = ConsoleLogger('serial_logger', True, True, True)
+        self.logger.set_level(LogLevel.DEBUG)
 
     '''
     Allow user to start initiation of the Modbus and opening of the UART port
@@ -61,12 +63,16 @@ class SerialModbusComm(object):
     def startModbus(self):
         try:
             self.modbusInstrument = minimalmodbus.Instrument(self.port_config.portname,self.slaveAddress)  # defaults as RTU mode
+        except self.modbusInstrument.serial.SerialException as sererr:
+            self.logger.error("Serial.SerialException - %s" % sererr)
+            logger.error("Unable to startModbus: %s, %s, %s, %s, %s, %s" % (self.port_config.portname, str(self.port_config.baudrate), str(self.port_config.bytesize), self.port_config.parity, str(self.port_config.stopbits), str(self.port_config.serialTimeout)))
+        except self.modbusInstrument.serial.ValueError as valerr:
+            self.logger.error("Serial.ValueError - %s" % valerr)
+            self.logger.error("Unable to startModbus: %s, %s, %s, %s, %s, %s" % (self.port_config.portname, str(self.port_config.baudrate), str(self.port_config.bytesize), self.port_config.parity, str(self.port_config.stopbits), str(self.port_config.serialTimeout)))
+        else:
             self.portOpen = True
-            print("SerialModbusComm - open startModbus: " + self.port_config.portname + ", " + str(self.port_config.baudrate) + ", " + str(self.port_config.bytesize) + ", " + self.port_config.parity + ", " + str(self.port_config.stopbits) + ", " + str(self.port_config.serialTimeout))
+            self.logger.info("Opened startModbus: %s, %s, %s, %s, %s, %s" % (self.port_config.portname, str(self.port_config.baudrate), str(self.port_config.bytesize), self.port_config.parity, str(self.port_config.stopbits), str(self.port_config.serialTimeout)))
             self.modbusInstrument.debug = True
-        except serial.SerialException:
-            print("SerialModbusComm - unable to startModbus: " + self.port_config.portname + ", " + str(self.port_config.baudrate) + ", " + str(self.port_config.bytesize) + ", " + self.port_config.parity + ", " + str(self.port_config.stopbits) + ", " + str(self.port_config.serialTimeout))
-            self.modbusInstrument.serial.close()
 
         '''
         Only port setting that is expected to be different from the default MODBUS settings is baudrate and timeout
@@ -74,14 +80,19 @@ class SerialModbusComm(object):
         self.modbusInstrument.serial.baudrate = self.port_config.baudrate
         self.modbusInstrument.serial.timeout = self.port_config.serialTimeout
 
-        print("SerialModbusComm - startModbus: " + self.port_config.portname + ", " + str(self.slaveAddress) + ", " + str(self.port_config.baudrate))
+        self.logger.info("StartModbus: %s, %s, %s" % (self.port_config.portname, str(self.slaveAddress), str(self.port_config.baudrate)))
 
     '''
     The user should stop the Modbus when their component ends (or wants to stop it).  This will also close the UART port.
     '''
     def stopModbus(self):
-        self.modbusInstrument.serial.close()
-        self.portOpen = False
+        try:
+            self.modbusInstrument.serial.close()
+        except self.modbusInstrument.serial.SerialException as err:
+            self.logger.error("Serial.SerialException - " % err)
+        else:
+            self.portOpen = False
+            self.logger.info("Closed Modbus serial port")
 
     '''
     Read a Slave Input Register (16-bit)
@@ -96,11 +107,23 @@ class SerialModbusComm(object):
         value = -9999
         try:
 #            pydevd.settrace(host='192.168.1.102',port=5678)
+            self.logger.debug("Read single input register request")
             value = self.modbusInstrument.read_register(registerAddress,numberOfDecimals,FunctionCodes.READ_INPUTREG.value,signedValue)
-        except IOError:
-            print("SerialModbusComm IOError: Failed to read input register - address=", registerAddress)
-        except TypeError:
-            print("SerialModbusComm TypeError: Failed to read input register - address=", registerAddress)
+        except self.modbusInstrument.serial.portNotOpenError:
+            self.logger.error("Serial.portNotOpenError")
+        except IOError as io_error:
+            self.logger.error("Minimalmodbus IOError - " % io_error)
+            self.logger.error("Failed to read input register - address=%s" % str(registerAddress))
+        except TypeError as type_err:
+            self.logger.error("Minimalmodbus TypeError - " % type_err)
+            self.logger.error("Failed to read input register - address=%s" % str(registerAddress))
+        except ValueError as value_err:
+            self.logger.error("Minimalmodbus ValueError - " % value_err)
+            self.logger.error("Failed to read input register - address=%s" % str(registerAddress))
+        except self.modbusInstrument.serial.writeTimeoutError:
+            self.logger.error("Serial.writeTimeoutError")
+        else:
+            self.logger.debug("Read single input register complete")
 
         return value
 
@@ -116,11 +139,23 @@ class SerialModbusComm(object):
     def readHoldingRegValue(self,registerAddress,numberOfDecimals,signedValue):
         value = -9999
         try:
+            self.logger.debug("Read single holding register request")
             value = self.modbusInstrument.read_register(registerAddress,numberOfDecimals,FunctionCodes.READ_HOLDINGREG.value,signedValue)
-        except IOError:
-            print("SerialModbusComm IOError: Failed to read holding register - address=",registerAddress)
-        except TypeError:
-            print("SerialModbusComm TypeError: Failed to read holding register - address=",registerAddress)
+        except self.modbusInstrument.serial.portNotOpenError:
+            self.logger.error("Serial.portNotOpenError")
+        except IOError as io_error:
+            self.logger.error("Minimalmodbus IOError - " % io_error)
+            self.logger.error("Failed to read holding register - address=%s" % str(registerAddress))
+        except TypeError as type_err:
+            self.logger.error("Minimalmodbus TypeError - " % type_err)
+            self.logger.error("Failed to read holding register - address=%s" % str(registerAddress))
+        except ValueError as value_err:
+            self.logger.error("Minimalmodbus ValueError - " % value_err)
+            self.logger.error("Failed to read holding register - address=%s" % str(registerAddress))
+        except self.modbusInstrument.serial.writeTimeoutError:
+            self.logger.error("Serial.writeTimeoutError")
+        else:
+            self.logger.debug("Read single holding register complete")
 
         return value
 
@@ -134,11 +169,23 @@ class SerialModbusComm(object):
     def readMultiInputRegValues(self,registerAddress,numberOfRegs):
         value = -9999
         try:
+            self.logger.debug("Read multiple input registers request")
             value = self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_INPUTREG.value)
-        except IOError:
-            print("SerialModbusComm IOError: Failed to read input registers - address=" + str(registerAddress) + ", numberOfRegs=" + str(numberOfRegs))
-        except TypeError:
-            print("SerialModbusComm TypeError: Failed to read input registers - address=" + str(registerAddress) + ", numberOfRegs=" + str(numberOfRegs))
+        except self.modbusInstrument.serial.portNotOpenError:
+            self.logger.error("Serial.portNotOpenError")
+        except IOError as io_error:
+            self.logger.error("Minimalmodbus IOError - " % io_error)
+            self.logger.error("Failed to read input registers - address=%s, numberOfRegs=%s" % (str(registerAddress), str(numberOfRegs)))
+        except TypeError as type_err:
+            self.logger.error("Minimalmodbus TypeError - " % type_err)
+            self.logger.error("Failed to read input registers - address=%s, numberOfRegs=%s" % (str(registerAddress), str(numberOfRegs)))
+        except ValueError as value_err:
+            self.logger.error("Minimalmodbus ValueError - " % value_err)
+            self.logger.error("Failed to read input registers - address=%s, numberOfRegs=%s" % (str(registerAddress), str(numberOfRegs)))
+        except self.modbusInstrument.serial.writeTimeoutError:
+            self.logger.error("Serial.writeTimeoutError")
+        else:
+            self.logger.debug("Read multiple input registers complete")
 
         return value
 
@@ -152,11 +199,23 @@ class SerialModbusComm(object):
     def readMultiHoldingRegValues(self,registerAddress,numberOfRegs):
         value = -9999
         try:
+            self.logger.debug("Read multiple holding registers request")
             value = self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_HOLDINGREG.value)
-        except IOError:
-            print("SerialModbusComm IOError: Failed to read holding registers - address=" + str(registerAddress) + ", numberOfRegs=" + str(numberOfRegs))
-        except TypeError:
-            print("SerialModbusComm TypeError: Failed to read holding registers - address=" + str(registerAddress) + ", numberOfRegs=" + str(numberOfRegs))
+        except self.modbusInstrument.serial.portNotOpenError:
+            self.logger.error("Serial.portNotOpenError")
+        except IOError as io_error:
+            self.logger.error("Minimalmodbus IOError - " % io_error)
+            self.logger.error("Failed to read holding registers - address=%s, numberOfRegs=%s" % (str(registerAddress), str(numberOfRegs)))
+        except TypeError as type_err:
+            self.logger.error("Minimalmodbus TypeError - " % type_err)
+            self.logger.error("Failed to read holding registers - address=%s, numberOfRegs=%s" % (str(registerAddress), str(numberOfRegs)))
+        except ValueError as value_err:
+            self.logger.error("Minimalmodbus ValueError - " % value_err)
+            self.logger.error("Failed to read holding registers - address=%s, numberOfRegs=%s" % (str(registerAddress), str(numberOfRegs)))
+        except self.modbusInstrument.serial.writeTimeoutError:
+            self.logger.error("Serial.writeTimeoutError")
+        else:
+            self.logger.debug("Read multiple holding registers complete")
 
         return value
 
@@ -175,11 +234,23 @@ class SerialModbusComm(object):
     '''
     def writeHoldingRegister(self,registerAddress,value,numberOfDecimals,signedValue):
         try:
+            self.logger.debug("Write single holding register request")
             self.modbusInstrument.write_register(registerAddress,value,numberOfDecimals,FunctionCodes.WRITE_HOLDINGREG.value,signedValue)
-        except IOError:
-            print("SerialModbusComm IOError: Failed to write holding register - address=" + str(registerAddress))
-        except TypeError:
-            print("SerialModbusComm TypeError: Failed to write holding register - address=" + str(registerAddress))
+        except self.modbusInstrument.serial.portNotOpenError:
+            self.logger.error("Serial.portNotOpenError")
+        except IOError as io_error:
+            self.logger.error("Minimalmodbus IOError - " % io_error)
+            self.logger.error("Failed to write holding register - address=%s" % str(registerAddress))
+        except TypeError as type_err:
+            self.logger.error("Minimalmodbus TypeError - " % type_err)
+            self.logger.error("Failed to write holding register - address=%s" % str(registerAddress))
+        except ValueError as value_err:
+            self.logger.error("Minimalmodbus ValueError - " % value_err)
+            self.logger.error("Failed to write holding register - address=%s" % str(registerAddress))
+        except self.modbusInstrument.serial.writeTimeoutError:
+            self.logger.error("Serial.writeTimeoutError")
+        else:
+            self.logger.debug("Write single holding register complete")
 
     '''
     Write multiple Slave holding register values (16 bits per register)
@@ -192,8 +263,20 @@ class SerialModbusComm(object):
     '''
     def writeHoldingRegisters(self,registerAddress,values):
         try:
+            self.logger.debug("Write multiple holding registers request")
             self.modbusInstrument.write_registers(registerAddress,values)
-        except IOError:
-            print("SerialModbusComm IOError: Failed to write holding registers - address=" + str(registerAddress))   #MM TODO:  add number of values
-        except TypeError:
-            print("SerialModbusComm TypeError: Failed to write holding registers - address=" + str(registerAddress))   #MM TODO:  add number of values
+        except self.modbusInstrument.serial.portNotOpenError:
+            self.logger.error("Serial.portNotOpenError")
+        except IOError as io_error:
+            self.logger.error("Minimalmodbus IOError - " % io_error)
+            self.logger.error("Failed to write holding registers - address=%s, numberOfRegs=%s" % (str(registerAddress), str(numberOfRegs)))
+        except TypeError as type_err:
+            self.logger.error("Minimalmodbus TypeError - " % type_err)
+            self.logger.error("Failed to write holding registers - address=%s, numberOfRegs=%s" % (str(registerAddress), str(numberOfRegs)))
+        except ValueError as value_err:
+            self.logger.error("Minimalmodbus ValueError - " % value_err)
+            self.logger.error("Failed to write holding registers - address=%s, numberOfRegs=%s" % (str(registerAddress), str(numberOfRegs)))
+        except self.modbusInstrument.serial.writeTimeoutError:
+            self.logger.error("Serial.writeTimeoutError")
+        else:
+            self.logger.debug("Write multiple holding registers complete")

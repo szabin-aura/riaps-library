@@ -4,8 +4,8 @@ Created on Mar 17, 2017
 @author: riaps
 '''
 from riaps.run.comp import Component
-from influxdb import InfluxDBClient
-from influxdb.client import InfluxDBClientError
+#from influxdb import InfluxDBClient
+#from influxdb.client import InfluxDBClientError
 import json
 import logging
 from datetime import datetime
@@ -19,8 +19,8 @@ class Logger(Component):
         self.pid = os.getpid()
         self.logger.info("%s - starting modbus logger" % str(self.pid))
         self.point_values = []
-        self.client = InfluxDBClient(host=db_host, port=db_port,
-            database=db_name, username=db_user, password=db_password)
+        #self.client = InfluxDBClient(host=db_host, port=db_port,
+        #    database=db_name, username=db_user, password=db_password)
 
     def on_rx_modbusData(self):
         msg = self.rx_modbusData.recv_pyobj()

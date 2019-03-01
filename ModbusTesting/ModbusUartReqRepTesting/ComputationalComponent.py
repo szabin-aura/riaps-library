@@ -52,13 +52,13 @@ class ComputationalComponent(Component):
 
     def on_clock(self):
         now = self.clock.recv_pyobj()
-        if debugMode:
-            self.logger.info("on_clock()[%s]: %s" % (str(self.pid),str(now)))
+        self.logger.info("on_clock()[%s]: %s" % (str(self.pid),str(now)))
 
         if not self.ModbusReady:
             # Setup status response port timeout
-            self.modbusStatusReqPort.set_recv_timeout(5.0)
-            self.modbusStatusReqPort.set_send_timeout(5.0)
+            ##self.modbusStatusReqPort.set_recv_timeout(10.0)
+            ##self.modbusStatusReqPort.set_send_timeout(10.0)
+            ##self.logger.info("Setup Send/RX timeouts")
 
             # Halt clock while waiting for the status
             self.clock.halt()
@@ -79,9 +79,9 @@ class ComputationalComponent(Component):
                         self.ModbusReady = True
                         self.logger.info("Modbus is ready, clock is restarted")
             except PortError as e:
-                self.logger.info("on_clock-modbusStatusReq:port exception = %d" % e.errno)
+                self.logger.error("on_clock-modbusStatusReq:port exception = %d" % e.errno)
                 if e.errno in (PortError.EAGAIN,PortError.EPROTO):
-                    self.logger.info("on_clock-modbusStatusReq: port error received")
+                    self.logger.error("on_clock-modbusStatusReq: port error received")
             self.clock.launch()
             self.logger.info("clock restarted")
         else:
@@ -106,17 +106,17 @@ class ComputationalComponent(Component):
 
             '''Send Command'''
             if self.ModbusPending == 0:
-                if debugMode:
-                    self.cmdSendStartTime = time.perf_counter()
-                    self.logger.debug("on_clock()[%s]: Send command to ModbusUartDevice at %f" % (str(self.pid),self.cmdSendStartTime))
+                #if debugMode:
+                #    self.cmdSendStartTime = time.perf_counter()
+                #    self.logger.debug("on_clock()[%s]: Send command to ModbusUartDevice at %f" % (str(self.pid),self.cmdSendStartTime))
                 try:
-                    if self.modbusCommandReqPort.send_pyobj(msg):
-                        self.ModbusPending += 1
-                        self.logger.debug("Modbus command sent")
+                    self.modbusCommandReqPort.send_pyobj(msg)
+                    self.ModbusPending += 1
+                    self.logger.info("Modbus command sent")
                 except PortError as e:
-                    self.logger.info("on_clock-modbusCommand:send exception = %d" % e.errno)
+                    self.logger.error("on_clock-modbusCommandReqPort:send exception = %d" % e.errno)
                     if e.errno in (PortError.EAGAIN,PortError.EPROTO):
-                        self.logger.info("on_clock-modbusCommand: port error received")
+                        self.logger.error("on_clock-modbusCommandReqPort: port error received")
 
 
     def on_modbusCommandReqPort(self):
@@ -124,16 +124,17 @@ class ComputationalComponent(Component):
         try:
             msg = self.modbusCommandReqPort.recv_pyobj()
             self.ModbusPending -= 1
+            self.logger.info("Modbus command response received")
         except PortError as e:
-            self.logger.info("on_modbusReqPort:send exception = %d" % e.errno)
+            self.logger.error("on_modbusCommandReqPort:receive exception = %d" % e.errno)
             if e.errno in (PortError.EAGAIN,PortError.EPROTO):
-                self.logger.info("on_modbusReqPort: port error received")
+                self.logger.error("on_modbusCommandReqPort: port error received")
 
 #       pydevd.settrace(host='192.168.1.102',port=5678)
 
-        if debugMode:
-            self.cmdResultsRxTime = time.perf_counter()
-            self.logger.debug("on_modbusReqPort()[%s]: Received Modbus data=%s from ModbusUartDevice at %f, time from cmd to data is %f ms" % (str(self.pid),repr(msg),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000))
+        #if debugMode:
+        #    self.cmdResultsRxTime = time.perf_counter()
+        #    self.logger.debug("on_modbusCommandReqPort()[%s]: Received Modbus data=%s from ModbusUartDevice at %f, time from cmd to data is %f ms" % (str(self.pid),repr(msg),self.cmdResultsRxTime,(self.cmdResultsRxTime-self.cmdSendStartTime)*1000))
 
         if self.command.commandType == ModbusCommands.READ_INPUTREG or self.command.commandType == ModbusCommands.READ_HOLDINGREG:
             logMsg = "Register " + str(self.command.registerAddress) + " value is " + str(msg)

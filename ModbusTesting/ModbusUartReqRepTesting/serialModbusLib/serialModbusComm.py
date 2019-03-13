@@ -46,7 +46,7 @@ class SerialModbusComm(object):
         self.slaveAddress = slaveAddressDecimal
         self.portOpen = False
         self.logger = ConsoleLogger('serial_logger', True, True, True)
-        self.logger.set_level(LogLevel.DEBUG)
+        self.logger.set_level(LogLevel.INFO)
 
     '''
     Allow user to start initiation of the Modbus and opening of the UART port

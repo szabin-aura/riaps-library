@@ -20,8 +20,8 @@ namespace riapsmodbuscreqrepuart {
                       const std::string& actor_name       )
             : ModbusUARTBase(parent_actor, actor_spec, type_spec, name, type_name, args, application_name, actor_name) {
 
-        	PID_ = getpid();
-        	component_logger()->info("Start ModbusUART device: {}", PID_);
+            PID_ = getpid();
+            component_logger()->info("Start ModbusUART device: {}", PID_);
 
             debug_mode_ = false;
             if (debug_mode_)
@@ -47,6 +47,7 @@ namespace riapsmodbuscreqrepuart {
                 }
             } else {
                 // Declare a default value
+                component_logger()->info("No port value provided, using default /dev/ttyO2");
                 port_config_.portname = "/dev/ttyO2";
             }
 
@@ -57,6 +58,7 @@ namespace riapsmodbuscreqrepuart {
                 }
             } else {
                 // Declare a default value
+                component_logger()->info("No baudrate provided, using default 115200");
                 port_config_.baudrate = 115200;
             }
 
@@ -67,6 +69,7 @@ namespace riapsmodbuscreqrepuart {
                 }
             } else {
                 // Declare a default value
+                component_logger()->info("No byte size value provided, using default 8");
                 port_config_.bytesize = 8;
             }
 
@@ -75,6 +78,7 @@ namespace riapsmodbuscreqrepuart {
                 port_config_.parity = iparity->getValueAsString()[0];
             } else {
                 // Declare a default value
+                component_logger()->info("No parity value provided, using default N");
                 port_config_.parity = 'N';
             }
 
@@ -85,6 +89,7 @@ namespace riapsmodbuscreqrepuart {
                 }
             } else {
                 // Declare a default value
+                component_logger()->info("No number of stop bits provided, using default 1");
                 port_config_.stopbits = 1;
             }
 
@@ -95,6 +100,7 @@ namespace riapsmodbuscreqrepuart {
                 }
             } else {
                 // Declare a default value
+                component_logger()->info("No port address provided, using default 10");
                 port_slave_address_ = 10;
             }
 
@@ -106,6 +112,7 @@ namespace riapsmodbuscreqrepuart {
                 }
             } else {
                 // Set a default of 3 (an arbritary number based on the first example created)
+                component_logger()->info("No number of holder registers provided, using default 3");
                 nb_holding_regs_ = 3;
             }
 
@@ -116,6 +123,7 @@ namespace riapsmodbuscreqrepuart {
                 }
             } else {
                 // Set a default of 4 (an arbritary number based on the first example created)
+                component_logger()->info("No number of input registers provided, using default 4");
                 nb_input_regs_ = 4;
             }
 
@@ -126,6 +134,7 @@ namespace riapsmodbuscreqrepuart {
                 }
             } else {
                 // Set a default of 8 (an arbritary number based on the first example created)
+                component_logger()->info("No number of coil bits provided, using default 8");
                 nb_coil_bits_ = 8;
             }
 
@@ -136,6 +145,7 @@ namespace riapsmodbuscreqrepuart {
                 }
             } else {
                 // Set a default of 8 (an arbritary number based on the first example created)
+                component_logger()->info("No number of discrete bits provided, using default 8");
                 nb_discrete_bits_ = 8;
             }
 
@@ -169,7 +179,7 @@ namespace riapsmodbuscreqrepuart {
             if (ctx_ == NULL) {
                 component_logger()->error("Unable to create the libmodbus context");
             } else {
-            	component_logger()->info("ModbusUART device initialization complete");
+                component_logger()->info("ModbusUART device initialization complete");
             }
 
             //component_logger()->debug("Init vars");
@@ -407,10 +417,10 @@ namespace riapsmodbuscreqrepuart {
 
         /* Close Modbus */
         void ModbusUART::CloseModbus(void) {
-        	if (IsModbusReady()) {
+            if (IsModbusReady()) {
                 modbus_close(ctx_);
                 component_logger()->info("Modbus connection closed");
-        	}
+            }
 
             modbus_free(ctx_);
             port_open_ = false;

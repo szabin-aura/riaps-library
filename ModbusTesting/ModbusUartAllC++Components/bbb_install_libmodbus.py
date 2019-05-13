@@ -55,7 +55,7 @@ if __name__ == '__main__':
         icmd = str.join(' ',(s, finstruct))
         bash(icmd)
 
-        finstruct = 'sys.run:"cd libmodbus; ./configure"'
+        finstruct = 'sys.run:"cd libmodbus; ./configure --libdir=/usr/lib/arm-linux-gnueabihf --includedir=/usr/include/arm-linux-gnueabihf"'
         icmd = str.join(' ',(s, finstruct))
         bash(icmd)
 

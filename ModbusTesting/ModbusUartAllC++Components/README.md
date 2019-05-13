@@ -13,7 +13,7 @@ The C++ Components in this project are:
     override any edits to these files.
 
 * ModbusUART (.h/.cc) - this is the modbus device component.  This device receives requests for Modbus communication,
-performs the communication, and then provides the response back to the requestor.  
+performs the communication, and then provides the response back to the requestor.
 
 * Logger (.h/cc) - this component subscribes to the results of the Modbus communication which is published by the
 ComputationalComponent.
@@ -35,21 +35,21 @@ library will be call from the RIAPS Modbus UART shared library.
     sudo apt-get install autoconf libtool pkg-config
     cd libmodbus
     ./autogen.sh
-    ./configure
+    ./configure --libdir=/usr/lib/arm-linux-gnueabihf --includedir=/usr/include/arm-linux-gnueabihf
     make
 
         libmodbus 3.1.2
         ===============
         prefix:                 /usr/local
         sysconfdir:             ${prefix}/etc
-        libdir:                 ${exec_prefix}/lib
-        includedir:             ${prefix}/include
+        libdir:                 /usr/lib/arm-linux-gnueabihf
+        includedir:             /usr/include/arm-linux-gnueabihf
 
     sudo make install
 
     `----------------------------------------------------------------
     Libraries have been installed in:
-        /usr/local/lib
+        /usr/lib/arm-linux-gnueabihf
     `----------------------------------------------------------------
     ```
 
@@ -83,7 +83,7 @@ sudo pip3 install influxdb
 
 ### Eclipse Project Properties Additions
 
-* Include **/usr/local/include/modbus** in the project properties include paths (C/C++ General --> Path and Symbols)
+* Include **/usr/arm-linux-gnueabihf/include/modbus** in the project properties include paths (C/C++ General --> Path and Symbols)
 * In the CMakeLists.txt file, add "modbus" in the target link libraries for the libmodbusuart.so.
 
 ```

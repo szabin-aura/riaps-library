@@ -15,8 +15,6 @@ from spdlog import ConsoleLogger, LogLevel
 from enum import Enum, unique
 #import pydevd
 
-'''serialTimeout is defined in seconds'''
-PortConfig = namedtuple('PortConfig', ['portname', 'baudrate', 'bytesize', 'parity', 'stopbits', 'serialTimeout'])
 
 '''
 Function Codes (per Modbus Spec)
@@ -33,20 +31,38 @@ class FunctionCodes(Enum):
     WRITEMULTI_HOLDINGREGS = 16
 
 
+'''
+- portname needed is the translate name from "UARTx" to "/dev/ttyOx"
+- serialTimeout is defined in seconds
+'''
+class PortConfig:
+    def __init__(self, aPortName, aBaudRate, aByteSize, aParity, aStopBits, aSerialTimeout):
+        self.portname = aPortName
+        self.baudrate = aBaudRate
+        self.bytesize = aByteSize
+        self.parity = aParity
+        self.stopbits = aStopBits
+        self.serialTimeout = aSerialTimeout
+
+
 class SerialModbusComm(object):
     '''
     This library will interface with minimalmodbus with communications over a serial interface.
     '''
 
-    def __init__(self,slaveAddressDecimal,portConfig):
+    def __init__(self,aSlaveAddressDecimal,aPortConfig):
         '''
         Constructor
         '''
-        self.port_config = portConfig
-        self.slaveAddress = slaveAddressDecimal
+        self.serialPortConfig = aPortConfig
+        self.slaveAddress = aSlaveAddressDecimal
         self.portOpen = False
-        self.logger = ConsoleLogger('serial_logger', True, True, True)
+        #pydevd.settrace(host='192.168.1.103',port=5678)
+        loggerName = 'serial_logger_' + str(aSlaveAddressDecimal) + '_' + aPortConfig.portname
+        self.logger = ConsoleLogger(loggerName, True, True, True)
+        # If wanting to debug, change logger level to DEBUG
         self.logger.set_level(LogLevel.INFO)
+        self.logger.info("__init__")
 
     '''
     Allow user to start initiation of the Modbus and opening of the UART port
@@ -62,28 +78,30 @@ class SerialModbusComm(object):
 
     def startModbus(self):
         try:
-            self.modbusInstrument = minimalmodbus.Instrument(self.port_config.portname,self.slaveAddress)  # defaults as RTU mode
+            self.modbusInstrument = minimalmodbus.Instrument(self.serialPortConfig.portname,self.slaveAddress)  # defaults as RTU mode
         except serial.SerialException as se_err:
             self.logger.error("Serial.SerialException - %s" % str(se_err))
             logger.error("Unable to startModbus: %s, %s, %s, %s, %s, %s" % (self.serialPortConfig.portname, str(self.serialPortConfig.baudrate), str(self.serialPortConfig.bytesize), self.serialPortConfig.parity, str(self.serialPortConfig.stopbits), str(self.serialPortConfig.serialTimeout)))
         else:
             self.portOpen = True
-            self.logger.info("Opened startModbus: %s, %s, %s, %s, %s, %s" % (self.port_config.portname, str(self.port_config.baudrate), str(self.port_config.bytesize), self.port_config.parity, str(self.port_config.stopbits), str(self.port_config.serialTimeout)))
-            self.modbusInstrument.debug = True
+            self.logger.info("Opened startModbus: %s, %s, %s, %s, %s, %s" % (self.serialPortConfig.portname, str(self.serialPortConfig.baudrate), str(self.serialPortConfig.bytesize), self.serialPortConfig.parity, str(self.serialPortConfig.stopbits), str(self.serialPortConfig.serialTimeout)))
+            # Set debug to True if you want to see the minimalmodbus communications
+            self.modbusInstrument.debug = False
 
         '''
         Only port setting that is expected to be different from the default MODBUS settings is baudrate and timeout
         '''
-        self.modbusInstrument.serial.baudrate = self.port_config.baudrate
-        self.modbusInstrument.serial.timeout = self.port_config.serialTimeout
+        self.modbusInstrument.serial.baudrate = self.serialPortConfig.baudrate
+        self.modbusInstrument.serial.timeout = self.serialPortConfig.serialTimeout
 
-        self.logger.info("StartModbus: %s, %s, %s" % (self.port_config.portname, str(self.slaveAddress), str(self.port_config.baudrate)))
+        self.logger.info("StartModbus: %s, %s, %s" % (self.serialPortConfig.portname, str(self.slaveAddress), str(self.serialPortConfig.baudrate)))
 
     '''
     The user should stop the Modbus when their component ends (or wants to stop it).  This will also close the UART port.
     '''
     def stopModbus(self):
         try:
+            self.logger.debug("Stopping")
             self.modbusInstrument.serial.close()
         except serial.SerialException as se_err:
             self.logger.error("Serial.SerialException - " % str(se_err))
@@ -103,8 +121,7 @@ class SerialModbusComm(object):
     def readInputRegValue(self,registerAddress,numberOfDecimals,signedValue):
         value = -9999
         try:
-#            pydevd.settrace(host='192.168.1.102',port=5678)
-            self.logger.debug("Read single input register request")
+            self.logger.debug("Read single input register request for (slaveAddr=%d,port=%s)" % (self.slaveAddress,self.serialPortConfig.portname))
             value = self.modbusInstrument.read_register(registerAddress,numberOfDecimals,FunctionCodes.READ_INPUTREG.value,signedValue)
         except IOError as io_error:
             self.logger.error("Minimalmodbus IOError - %s" % io_error.args[0])
@@ -134,7 +151,7 @@ class SerialModbusComm(object):
     def readHoldingRegValue(self,registerAddress,numberOfDecimals,signedValue):
         value = -9999
         try:
-            self.logger.debug("Read single holding register request")
+            self.logger.debug("Read single holding register request for (slaveAddr=%d,port=%s)" % (self.slaveAddress,self.serialPortConfig.portname))
             value = self.modbusInstrument.read_register(registerAddress,numberOfDecimals,FunctionCodes.READ_HOLDINGREG.value,signedValue)
         except IOError as io_error:
             self.logger.error("Minimalmodbus IOError - %s" % io_error.args[0])
@@ -162,7 +179,7 @@ class SerialModbusComm(object):
     def readMultiInputRegValues(self,registerAddress,numberOfRegs):
         value = -9999
         try:
-            self.logger.debug("Read multiple input registers request")
+            self.logger.debug("Read multiple input registers request for (slaveAddr=%d,port=%s)" % (self.slaveAddress,self.serialPortConfig.portname))
             value = self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_INPUTREG.value)
         except IOError as io_error:
             self.logger.error("Minimalmodbus IOError - %s" % io_error.args[0])
@@ -190,7 +207,7 @@ class SerialModbusComm(object):
     def readMultiHoldingRegValues(self,registerAddress,numberOfRegs):
         value = -9999
         try:
-            self.logger.debug("Read multiple holding registers request")
+            self.logger.debug("Read multiple holding registers request for (slaveAddr=%d,port=%s)" % (self.slaveAddress,self.serialPortConfig.portname))
             value = self.modbusInstrument.read_registers(registerAddress,numberOfRegs,FunctionCodes.READ_HOLDINGREG.value)
         except IOError as io_error:
             self.logger.error("Minimalmodbus IOError - %s" % io_error.args[0])
@@ -223,7 +240,7 @@ class SerialModbusComm(object):
     '''
     def writeHoldingRegister(self,registerAddress,value,numberOfDecimals,signedValue):
         try:
-            self.logger.debug("Write single holding register request")
+            self.logger.debug("Write single holding register request for (slaveAddr=%d,port=%s)" % (self.slaveAddress,self.serialPortConfig.portname))
             self.modbusInstrument.write_register(registerAddress,value,numberOfDecimals,FunctionCodes.WRITE_HOLDINGREG.value,signedValue)
         except IOError as io_error:
             self.logger.error("Minimalmodbus IOError - %s" % io_error.args[0])
@@ -250,7 +267,7 @@ class SerialModbusComm(object):
     '''
     def writeHoldingRegisters(self,registerAddress,values):
         try:
-            self.logger.debug("Write multiple holding registers request")
+            self.logger.debug("Write multiple holding registers request for (slaveAddr=%d,port=%s)" % (self.slaveAddress,self.serialPortConfig.portname))
             self.modbusInstrument.write_registers(registerAddress,values)
         except IOError as io_error:
             self.logger.error("Minimalmodbus IOError - %s" % io_error.args[0])
